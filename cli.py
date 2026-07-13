@@ -3,6 +3,7 @@ from swing_weight import calculate_moment, moment_to_swing_weight
 from moment_of_inertia import calculate_moi
 from club_repository import save_club, load_club, list_club_names
 from club_comparison import compare_clubs
+from club_diagram import plot_club_diagram
 
 
 def get_valid_float(prompt: str) -> float:
@@ -107,11 +108,11 @@ def main():
     print("----------------------")
 
     while True:
-        print()
         print("1. Analyze a new club")
         print("2. Load a saved club")
         print("3. Compare two saved clubs")
-        print("4. Quit")
+        print("4. Generate a diagram for a saved club")
+        print("5. Quit")
         choice = input("Choose an option: ")
 
         if choice == "1":
@@ -121,11 +122,30 @@ def main():
         elif choice == "3":
             compare_saved_clubs()
         elif choice == "4":
+            generate_diagram_for_saved_club()
+        elif choice == "5":
             print("Goodbye.")
             break
         else:
-            print("Invalid option, please choose 1, 2, 3, or 4.")
+            print("Invalid option, please choose 1, 2, 3, 4, or 5.")
 
+def generate_diagram_for_saved_club() -> None:
+    names = list_club_names()
+    if not names:
+        print("No saved clubs found.")
+        return
+
+    print("Saved clubs:", ", ".join(names))
+    name = input("Enter the name of the club to diagram: ")
+
+    try:
+        club = load_club(name)
+    except KeyError as error:
+        print(error)
+        return
+
+    output_path = f"{name.replace(' ', '_')}_diagram.png"
+    plot_club_diagram(club, output_path=output_path)
 
 if __name__ == "__main__":
     main()

@@ -2,3 +2,4 @@ venv/
 __pycache__/
 *.pyc
 clubs.json
+club_diagram.png

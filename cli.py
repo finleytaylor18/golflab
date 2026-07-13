@@ -2,6 +2,7 @@ from club_specification import ClubSpecification
 from swing_weight import calculate_moment, moment_to_swing_weight
 from moment_of_inertia import calculate_moi
 from club_repository import save_club, load_club, list_club_names
+from club_comparison import compare_clubs
 
 
 def get_valid_float(prompt: str) -> float:
@@ -71,6 +72,36 @@ def load_and_analyze_saved_club() -> None:
     print_results(club)
 
 
+def print_comparison(comparison) -> None:
+    print()
+    print(f"Comparing '{comparison.name_a}' vs '{comparison.name_b}'")
+    print("-" * 40)
+    print(f"Swing weight: {comparison.swing_weight_a}  vs  {comparison.swing_weight_b}")
+    print(f"Moment:       {comparison.moment_a:.2f}  vs  {comparison.moment_b:.2f}   (delta: {comparison.moment_delta:+.2f})")
+    print(f"MOI:          {comparison.moi_a:.2f}  vs  {comparison.moi_b:.2f}   (delta: {comparison.moi_delta:+.2f})")
+
+
+def compare_saved_clubs() -> None:
+    names = list_club_names()
+    if len(names) < 2:
+        print("You need at least 2 saved clubs to compare.")
+        return
+
+    print("Saved clubs:", ", ".join(names))
+    name_a = input("Enter the first club's name: ")
+    name_b = input("Enter the second club's name: ")
+
+    try:
+        club_a = load_club(name_a)
+        club_b = load_club(name_b)
+    except KeyError as error:
+        print(error)
+        return
+
+    comparison = compare_clubs(name_a, club_a, name_b, club_b)
+    print_comparison(comparison)
+
+
 def main():
     print("GolfLab Club Analyzer")
     print("----------------------")
@@ -79,7 +110,8 @@ def main():
         print()
         print("1. Analyze a new club")
         print("2. Load a saved club")
-        print("3. Quit")
+        print("3. Compare two saved clubs")
+        print("4. Quit")
         choice = input("Choose an option: ")
 
         if choice == "1":
@@ -87,10 +119,12 @@ def main():
         elif choice == "2":
             load_and_analyze_saved_club()
         elif choice == "3":
+            compare_saved_clubs()
+        elif choice == "4":
             print("Goodbye.")
             break
         else:
-            print("Invalid option, please choose 1, 2, or 3.")
+            print("Invalid option, please choose 1, 2, 3, or 4.")
 
 
 if __name__ == "__main__":

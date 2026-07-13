@@ -1,9 +1,10 @@
-import os
 from club_specification import ClubSpecification
-from club_repository import save_club, load_club, list_club_names, DATA_FILE
+from club_repository import save_club, load_club
 
 
-def test_save_and_load_club_round_trip():
+def test_save_and_load_club_round_trip(tmp_path):
+    test_file = tmp_path / "test_clubs.json"
+
     original = ClubSpecification(
         head_mass=200,
         shaft_mass=65,
@@ -12,10 +13,7 @@ def test_save_and_load_club_round_trip():
         club_length=45.5,
     )
 
-    save_club("test_driver", original)
-    loaded = load_club("test_driver")
+    save_club("test_driver", original, data_file=test_file)
+    loaded = load_club("test_driver", data_file=test_file)
 
     assert loaded == original
-
-    if DATA_FILE.exists():
-        os.remove(DATA_FILE)

@@ -4,20 +4,23 @@ An engineering platform for golf club design, analysis, and R&D — built to sup
 
 ## Overview
 
-GolfLab models golf clubs as structured engineering data and provides validated calculations used in real club design, starting with:
+GolfLab models golf clubs as structured engineering data and provides validated calculations used in real club design:
 
 - **Swing weight** — measures how a club's mass is distributed relative to a 14-inch fulcrum point, expressed on the industry-standard Lorythmic scale (e.g. D2).
 - **Moment of Inertia (MOI)** — measures a club's resistance to rotation, a key factor in how "forgiving" or head-heavy a club feels through impact.
+- **Prototype comparison** — compares two saved clubs side by side, showing not just their individual results but the calculated delta between them, so a designer can see exactly what effect a design change had.
 
-Both calculations run on a shared, validated `ClubSpecification` domain model, and are exposed through a command-line interface.
+Club specifications are validated on creation and can be saved and reloaded, so prototypes persist across sessions rather than existing only for a single run.
 
 ## Features
 
 - Typed, validated club specification model (rejects physically unrealistic inputs)
 - Swing weight calculation with Lorythmic scale conversion
 - Moment of Inertia calculation
-- Command-line interface with input validation
-- Full pytest test coverage for all calculations
+- JSON-based persistence (save/load club prototypes by name)
+- Prototype comparison with calculated deltas
+- Command-line interface with input validation and error handling
+- Full pytest test coverage, including isolated tests for file-based persistence
 
 ## Getting started
 
@@ -54,8 +57,10 @@ These are documented, intentional simplifications for a first version — refini
 
 ## Roadmap
 
-- [ ] Persistence (save/load club specifications)
-- [ ] Shaft comparison across multiple clubs
+- [x] Swing weight calculator
+- [x] Moment of Inertia calculator
+- [x] Persistence (save/load club specifications)
+- [x] Prototype comparison
 - [ ] Center of gravity visualization
 - [ ] Materials database
 - [ ] Web-based interface

@@ -5,6 +5,8 @@ from club_repository import save_club, load_club, list_club_names
 from club_comparison import compare_clubs
 from club_diagram import plot_club_diagram
 from club_specification import ClubSpecification, ClubType
+from clubhead_composition import WeightPort, ClubHeadComposition, calculate_head_cg
+from clubhead_diagram import plot_head_composition
 
 
 def get_valid_club_type() -> ClubType:
@@ -122,6 +124,36 @@ def compare_saved_clubs() -> None:
     print_comparison(comparison)
 
 
+def design_clubhead_composition() -> None:
+    print("Enter weight ports one at a time. Enter a blank name when done.")
+    ports = []
+    while True:
+        name = input(f"Port {len(ports) + 1} name (blank to finish): ")
+        if not name:
+            break
+        mass = get_valid_float("  Mass (grams): ")
+        toe_heel = get_valid_float("  Toe(+)/Heel(-) position (inches from head center): ")
+        face_back = get_valid_float("  Back(+)/Face(-) position (inches from head center): ")
+        try:
+            ports.append(WeightPort(name=name, mass=mass, toe_heel=toe_heel, face_back=face_back))
+        except ValueError as error:
+            print(f"Invalid weight port: {error}")
+
+    try:
+        composition = ClubHeadComposition(weight_ports=ports)
+    except ValueError as error:
+        print(f"Invalid clubhead composition: {error}")
+        return
+
+    toe_heel_cg, face_back_cg = calculate_head_cg(composition)
+    print()
+    print(f"Head CG: toe/heel {toe_heel_cg:+.3f}\", face/back {face_back_cg:+.3f}\" (from head center)")
+
+    diagram_choice = input("Generate a diagram? (y/n): ")
+    if diagram_choice.lower() == "y":
+        plot_head_composition(composition)
+
+
 def main():
     print("GolfLab Club Analyzer")
     print("----------------------")
@@ -131,7 +163,8 @@ def main():
         print("2. Load a saved club")
         print("3. Compare two saved clubs")
         print("4. Generate a diagram for a saved club")
-        print("5. Quit")
+        print("5. Design clubhead weight distribution")
+        print("6. Quit")
         choice = input("Choose an option: ")
 
         if choice == "1":
@@ -143,10 +176,12 @@ def main():
         elif choice == "4":
             generate_diagram_for_saved_club()
         elif choice == "5":
+            design_clubhead_composition()
+        elif choice == "6":
             print("Goodbye.")
             break
         else:
-            print("Invalid option, please choose 1, 2, 3, 4, or 5.")
+            print("Invalid option, please choose 1, 2, 3, 4, 5, or 6.")
 
 def generate_diagram_for_saved_club() -> None:
     names = list_club_names()

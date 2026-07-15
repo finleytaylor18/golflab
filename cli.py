@@ -4,6 +4,23 @@ from moment_of_inertia import calculate_moi
 from club_repository import save_club, load_club, list_club_names
 from club_comparison import compare_clubs
 from club_diagram import plot_club_diagram
+from club_specification import ClubSpecification, ClubType
+
+
+def get_valid_club_type() -> ClubType:
+    options = list(ClubType)
+    while True:
+        print("Club types:")
+        for index, option in enumerate(options, start=1):
+            print(f"  {index}. {option.value}")
+        raw_choice = input("Choose a club type (number): ")
+        try:
+            choice_index = int(raw_choice) - 1
+            if 0 <= choice_index < len(options):
+                return options[choice_index]
+        except ValueError:
+            pass
+        print("Invalid choice, please try again.")
 
 
 def get_valid_float(prompt: str) -> float:
@@ -28,6 +45,7 @@ def print_results(club: ClubSpecification) -> None:
 
 
 def analyze_new_club() -> None:
+    club_type = get_valid_club_type()
     head_mass = get_valid_float("Head mass (grams): ")
     shaft_mass = get_valid_float("Shaft mass (grams): ")
     shaft_length = get_valid_float("Shaft length (inches): ")
@@ -36,6 +54,7 @@ def analyze_new_club() -> None:
 
     try:
         club = ClubSpecification(
+            club_type=club_type,
             head_mass=head_mass,
             shaft_mass=shaft_mass,
             shaft_length=shaft_length,

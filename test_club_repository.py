@@ -1,4 +1,4 @@
-from club_specification import ClubSpecification
+from club_specification import ClubSpecification, ClubType
 from club_repository import save_club, load_club
 
 
@@ -6,6 +6,7 @@ def test_save_and_load_club_round_trip(tmp_path):
     test_file = tmp_path / "test_clubs.json"
 
     original = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=200,
         shaft_mass=65,
         shaft_length=45.5,

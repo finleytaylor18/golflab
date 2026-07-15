@@ -1,12 +1,14 @@
-from club_specification import ClubSpecification
+from club_specification import ClubSpecification, ClubType
 from club_comparison import compare_clubs
 
 
 def test_compare_clubs_calculates_correct_deltas():
     club_a = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=200, shaft_mass=65, shaft_length=45.5, grip_mass=50, club_length=45.5,
     )
     club_b = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=195, shaft_mass=60, shaft_length=45.5, grip_mass=48, club_length=45.75,
     )
 

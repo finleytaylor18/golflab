@@ -1,9 +1,10 @@
 import pytest
-from club_specification import ClubSpecification
+from club_specification import ClubSpecification, ClubType
 
 
 def test_valid_club_specification_is_created_successfully():
     club = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=200,
         shaft_mass=65,
         shaft_length=45.5,
@@ -16,6 +17,7 @@ def test_valid_club_specification_is_created_successfully():
 def test_club_length_out_of_range_raises_value_error():
     with pytest.raises(ValueError):
         ClubSpecification(
+            club_type=ClubType.DRIVER,
             head_mass=200,
             shaft_mass=65,
             shaft_length=45.5,
@@ -27,6 +29,7 @@ def test_club_length_out_of_range_raises_value_error():
 def test_head_mass_out_of_range_raises_value_error():
     with pytest.raises(ValueError):
         ClubSpecification(
+            club_type=ClubType.DRIVER,
             head_mass=5555,
             shaft_mass=65,
             shaft_length=45.5,

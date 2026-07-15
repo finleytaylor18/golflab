@@ -1,4 +1,4 @@
-from club_specification import ClubSpecification
+from club_specification import ClubSpecification, ClubType
 
 FULCRUM_DISTANCE_FROM_BUTT = 14.0  # inches, industry standard
 GRIP_CENTER_FROM_BUTT = 5.0        # inches, assumed grip midpoint
@@ -33,6 +33,7 @@ def moment_to_swing_weight(moment: float) -> str:
 
 if __name__ == "__main__":
     driver = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=200,
         shaft_mass=65,
         shaft_length=45.5,

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from club_specification import ClubSpecification
+from club_specification import ClubSpecification, ClubType
 from center_of_gravity import calculate_balance_point, GRIP_CENTER_FROM_BUTT
 
 GRIP_LENGTH = 10.0  # inches, typical standard grip length
@@ -58,6 +58,7 @@ def plot_club_diagram(club: ClubSpecification, output_path: str = "club_diagram.
 
 if __name__ == "__main__":
     driver = ClubSpecification(
+        club_type=ClubType.DRIVER,
         head_mass=200,
         shaft_mass=65,
         shaft_length=45.5,

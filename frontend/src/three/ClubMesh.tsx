@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { RoundedBox } from "@react-three/drei";
 import type { ClubSpecification } from "../api/types";
 import { getHeadShape, GRIP_LENGTH_IN, SHAFT_TIP_RADIUS_IN, SHAFT_BUTT_RADIUS_IN, GRIP_RADIUS_IN } from "./clubGeometry";
 
@@ -30,13 +31,17 @@ export function ClubMesh({ club }: Props) {
         <meshStandardMaterial color="#a8afba" metalness={0.7} roughness={0.25} />
       </mesh>
 
-      {headShape.kind === "rounded" ? (
-        <mesh position={[headX, 0, 0]} scale={[headShape.width / 2, headShape.height / 2, headShape.depth / 2]}>
-          <sphereGeometry args={[1, 32, 24]} />
+      {headShape.family === "rounded" ? (
+        <RoundedBox
+          position={[headX, 0, 0]}
+          args={[headShape.width, headShape.height, headShape.depth]}
+          radius={Math.min(headShape.height, headShape.depth) * 0.22}
+          smoothness={4}
+        >
           <meshStandardMaterial color="#1d5fbf" metalness={0.45} roughness={0.3} />
-        </mesh>
+        </RoundedBox>
       ) : (
-        <mesh position={[headX, 0, 0]}>
+        <mesh position={[headX, 0, 0]} rotation={[0, 0, (headShape.tiltDeg * Math.PI) / 180]}>
           <boxGeometry args={[headShape.width, headShape.height, headShape.depth]} />
           <meshStandardMaterial color="#1d5fbf" metalness={0.5} roughness={0.3} />
         </mesh>

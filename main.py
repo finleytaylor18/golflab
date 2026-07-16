@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from club_specification import ClubSpecification
 from swing_weight import calculate_moment, moment_to_swing_weight
 from moment_of_inertia import calculate_moi
@@ -15,6 +16,16 @@ from api_schemas import (
 )
 
 app = FastAPI(title="GolfLab API")
+
+# Local Vite dev server origins only -- this is a local engineering tool, not
+# a deployed public service, so a fixed allowlist of local dev ports is
+# sufficient rather than a wildcard or environment-driven config.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _build_club(request: ClubSpecificationRequest) -> ClubSpecification:

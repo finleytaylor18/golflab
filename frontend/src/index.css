@@ -1,0 +1,51 @@
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --border: #dde1e6;
+  --text: #2a2f36;
+  --text-muted: #6b7280;
+  --accent: #1d5fbf;
+  --accent-bg: rgba(29, 95, 191, 0.08);
+  --error: #b3261e;
+  --error-bg: rgba(179, 38, 30, 0.08);
+
+  --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  font: 15px/1.5 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --surface: #1c1f25;
+    --border: #2c313a;
+    --text: #e6e8eb;
+    --text-muted: #9aa1ac;
+    --accent: #5b9dff;
+    --accent-bg: rgba(91, 157, 255, 0.12);
+    --error: #ff8a80;
+    --error-bg: rgba(255, 138, 128, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}

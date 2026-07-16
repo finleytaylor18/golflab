@@ -1,5 +1,6 @@
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from club_specification import ClubSpecification
 from swing_weight import calculate_moment, moment_to_swing_weight
 from moment_of_inertia import calculate_moi
@@ -17,27 +18,12 @@ from api_schemas import (
 
 app = FastAPI(title="GolfLab API")
 
-# Local Vite dev server origins only -- this is a local engineering tool, not
-# a deployed public service, so a fixed allowlist of local dev ports is
-# sufficient rather than a wildcard or environment-driven config.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 def _build_club(request: ClubSpecificationRequest) -> ClubSpecification:
     try:
         return to_club_specification(request)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-
-
-@app.get("/")
-def root():
-    return {"message": "GolfLab API", "docs": "/docs"}
 
 
 @app.post("/calculations/swing-weight")
@@ -108,3 +94,14 @@ def load_club_endpoint(name: str):
         return load_club(name)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error))
+
+
+# Serves the built frontend (frontend/dist, from `npm run build`) so the
+# whole app runs from this one process/port instead of needing a separate
+# Vite server. Mounted last and deliberately at "/" -- every API route above
+# is registered on app.router before this, and Starlette matches routes in
+# registration order, so /calculations/* and /clubs* are handled by their
+# explicit handlers first and everything else falls through to static files.
+FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

@@ -7,12 +7,14 @@ import type {
   BallFlightResult,
 } from "./types";
 
-const API_BASE = "http://localhost:8000";
-
+// Relative -- in production this app is served by the same FastAPI process
+// it's calling (see main.py's StaticFiles mount), and in dev, vite.config.ts
+// proxies these paths to the backend, so there's no cross-origin request in
+// either case and no base URL to hardcode.
 class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -40,13 +40,35 @@ pip install -r requirements.txt
 python3 cli.py
 ```
 
-## Running the API
+## Running the web app
+
+The web app is a React frontend (`frontend/`) served directly by the FastAPI
+backend as static files, so there's a single process and a single port —
+no separate frontend server to keep running alongside the API.
 
 ```bash
+cd frontend && npm install && npm run build && cd ..
 uvicorn main:app --reload --port 8000
 ```
 
-Then open `http://localhost:8000/docs` for interactive API documentation (Swagger UI) — every endpoint can be tried directly from the browser without a frontend. See `main.py` for the full endpoint list (calculations under `/calculations/*`, persistence under `/clubs`).
+Open `http://localhost:8000` for the app, or `http://localhost:8000/docs`
+for interactive API documentation (Swagger UI) — every endpoint can also be
+tried directly from the browser without the frontend.
+
+If you're actively editing frontend code and want hot-reload instead of
+re-running `npm run build` after every change, run the Vite dev server
+alongside the API instead:
+
+```bash
+# terminal 1
+uvicorn main:app --reload --port 8000
+# terminal 2
+cd frontend && npm run dev
+```
+
+`vite.config.ts` proxies `/calculations` and `/clubs` to the API, so the
+frontend code always uses relative URLs and doesn't need to know or care
+which of the two setups above is serving it.
 
 ## Running tests
 
@@ -75,6 +97,9 @@ These are documented, intentional simplifications for a first version — refini
 - pytest
 - matplotlib
 - FastAPI / uvicorn
+- React / TypeScript / Vite
+- React Three Fiber (Three.js) for the 3D club model
+- Recharts for trajectory charting
 
 ## Roadmap
 
@@ -87,6 +112,7 @@ These are documented, intentional simplifications for a first version — refini
 - [x] Clubhead weight-distribution modeling
 - [x] Ball flight prediction
 - [x] FastAPI backend
-- [ ] React frontend
-- [ ] 3D club visualization
+- [x] React frontend with live-recalculating club/swing panels
+- [x] Parametric 3D club visualization (stylized, not manufacturable geometry)
+- [x] Ball flight simulation panel with shot-shape charting
 - [ ] Materials database

@@ -112,6 +112,5 @@ These are documented, intentional simplifications for a first version — refini
 - [x] Ball flight prediction
 - [x] FastAPI backend
 - [x] React frontend with live-recalculating club/swing panels
-- [x] Hand-drawn 2D club silhouette, distinct per club type
 - [x] Ball flight simulation panel with shot-shape charting
 - [ ] Materials database

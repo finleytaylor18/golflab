@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { HeadPanel } from "./components/HeadPanel";
 import { ShaftPanel } from "./components/ShaftPanel";
@@ -7,15 +7,10 @@ import { SpecPanel } from "./components/SpecPanel";
 import { SwingProfileForm } from "./components/SwingProfileForm";
 import { ResultsDisplay } from "./components/ResultsDisplay";
 import { SimulationPanel } from "./components/SimulationPanel";
-import { Spinner } from "./components/Spinner";
+import { ClubIllustration } from "./illustrations/ClubIllustration";
 import { getSwingWeight, getMoi, getBalancePoint, ApiError } from "./api/client";
 import { DEFAULT_CLUB, DEFAULT_SWING } from "./api/types";
 import { useDebouncedValue } from "./api/useDebouncedValue";
-
-// three.js is the single largest dependency in the bundle -- lazy-loading it
-// means the form panels paint immediately instead of waiting on a ~1MB chunk
-// that isn't needed until the canvas actually mounts.
-const ClubScene = lazy(() => import("./three/ClubScene").then((m) => ({ default: m.ClubScene })));
 
 function App() {
   const [club, setClub] = useState(DEFAULT_CLUB);
@@ -71,10 +66,8 @@ function App() {
         <SpecPanel value={club} onChange={setClub} />
 
         <GripPanel value={club} onChange={setClub} />
-        <div className="canvas-container">
-          <Suspense fallback={<Spinner label="Loading 3D model…" />}>
-            <ClubScene club={club} />
-          </Suspense>
+        <div className="illustration-container">
+          <ClubIllustration club={club} />
         </div>
         <HeadPanel value={club} onChange={setClub} />
 

@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 clubs.json
 *_diagram.png
+.claude/

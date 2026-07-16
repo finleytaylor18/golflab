@@ -13,11 +13,11 @@ GolfLab models golf clubs as structured engineering data and provides validated 
 - **Ball flight prediction** — combines a club specification and a player's swing profile (clubhead speed, attack angle, swing path, face angle, dynamic loft) into launch conditions and a numerically simulated trajectory (carry distance, peak height, lateral deviation, shot shape).
 - **Prototype comparison** — compares two saved clubs side by side, showing not just their individual results but the calculated delta between them, so a designer can see exactly what effect a design change had.
 
-Club specifications are validated on creation, type-specific (a driver-length shaft is rejected for a wedge), and can be saved and reloaded, so prototypes persist across sessions rather than existing only for a single run.
+Club specifications are validated on creation against 25 specific club types (driver, 3/5/7 wood, 2/3/4 hybrid, 2-9 iron, and wedges by loft in 2-degree increments from 46° to 64°), each with its own length and loft range, and can be saved and reloaded, so prototypes persist across sessions rather than existing only for a single run.
 
 ## Features
 
-- Typed, validated club specification model with per-club-type length and loft ranges (driver/wood/hybrid/iron/wedge)
+- Typed, validated club specification model covering 25 specific club types, each with its own length and loft range (driver, 3/5/7 wood, 2/3/4 hybrid, 2-9 iron, wedges by loft 46°-64°)
 - Swing weight calculation with Lorythmic scale conversion
 - Moment of Inertia calculation
 - Center of gravity calculation with 1D matplotlib diagram
@@ -84,7 +84,8 @@ This is a v1 model, and its assumptions are documented deliberately rather than 
 - **Clubhead position** is modeled at the full club length from the butt end, without accounting for the head's actual center of gravity inset. This tends to make swing weight estimates run somewhat higher than a physically measured club.
 - **Grip center of mass** is assumed to sit 5 inches from the butt end for all clubs.
 - Swing weight conversion constants (A0 reference point, points-per-increment) were calibrated against publicly available reference examples, not an official manufacturer specification.
-- **Mass validation ranges** (`MIN_MASS`/`MAX_MASS`) are global across all club types; club length ranges are type-specific but mass ranges are not yet.
+- **Mass validation ranges** (`MIN_MASS`/`MAX_MASS`) are global across all club types; length and loft ranges are type-specific but mass ranges are not yet.
+- **Wedge length** doesn't vary by loft — every wedge (46°-64°) validates against the same length range, since real wedge length is much more a matter of player/fitter preference than a reliable function of loft the way iron length is. Iron and wood/hybrid length *does* vary by number, since that relationship is well-established in real graduated sets.
 - **Clubhead weight ports** are modeled independently of `ClubSpecification` — a weight-port composition is not persisted alongside a saved club, and its individual port masses are not currently checked against the club's overall `head_mass`.
 - **Ball flight aerodynamic constants** (drag coefficient, lift-coefficient-vs-spin-ratio slope, smash factor curve, spin rate model) are simplified, physically-motivated approximations, not manufacturer or peer-reviewed aerodynamic data — see the comments in `ball_flight.py` for what each constant represents and how it was calibrated.
 - **`SwingProfile.dynamic_loft`** is an independent input (the loft actually presented to the ball at impact), not derived from the club's static `loft` — this lets a player's shaft-lean/delofting be modeled without assuming a fixed relationship between the two.
@@ -107,7 +108,7 @@ These are documented, intentional simplifications for a first version — refini
 - [x] Persistence (save/load club specifications)
 - [x] Prototype comparison
 - [x] Center of gravity visualization
-- [x] Club type customization with type-specific validation
+- [x] Club type customization with type-specific validation, split into 25 specific clubs (numbered irons/woods/hybrids, wedges by loft)
 - [x] Clubhead weight-distribution modeling
 - [x] Ball flight prediction
 - [x] FastAPI backend

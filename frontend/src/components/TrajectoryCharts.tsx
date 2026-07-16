@@ -5,7 +5,7 @@ interface Props {
 }
 
 function formatTick(value: number): string {
-  return value.toFixed(1);
+  return value.toFixed(0);
 }
 
 export function TrajectoryCharts({ points }: Props) {

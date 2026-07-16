@@ -1,5 +1,5 @@
-import type { ClubSpecification } from "../api/types";
-import { CLUB_TYPES } from "../api/types";
+import type { ClubSpecification, ClubType } from "../api/types";
+import { CLUB_TYPES, CLUB_LENGTH_RANGES, LOFT_RANGES } from "../api/types";
 import { NumberField } from "./NumberField";
 
 interface Props {
@@ -7,9 +7,28 @@ interface Props {
   onChange: (club: ClubSpecification) => void;
 }
 
+function median([min, max]: [number, number]): number {
+  return Math.round(((min + max) / 2) * 10) / 10;
+}
+
 export function ClubSpecForm({ value, onChange }: Props) {
   function setField<K extends keyof ClubSpecification>(key: K, fieldValue: ClubSpecification[K]) {
     onChange({ ...value, [key]: fieldValue });
+  }
+
+  // club_length and loft are the only fields with a real type-specific valid
+  // range in the domain model (CLUB_LENGTH_RANGES/LOFT_RANGES), so switching
+  // type resets those two to the middle of the new range -- a value that's
+  // always valid without the user having to look up what's realistic for a
+  // wedge vs. a driver. shaft_length rides along with club_length since the
+  // two are treated as equal everywhere else in this model. head_mass,
+  // shaft_mass, grip_mass, and lie_angle don't change: they share one global
+  // range that isn't type-specific, so there's no "median for this type" to
+  // reset them to.
+  function handleClubTypeChange(club_type: ClubType) {
+    const club_length = median(CLUB_LENGTH_RANGES[club_type]);
+    const loft = median(LOFT_RANGES[club_type]);
+    onChange({ ...value, club_type, club_length, loft, shaft_length: club_length });
   }
 
   return (
@@ -20,7 +39,7 @@ export function ClubSpecForm({ value, onChange }: Props) {
           <span>Club type</span>
           <select
             value={value.club_type}
-            onChange={(event) => setField("club_type", event.target.value as ClubSpecification["club_type"])}
+            onChange={(event) => handleClubTypeChange(event.target.value as ClubType)}
           >
             {CLUB_TYPES.map((type) => (
               <option key={type} value={type}>

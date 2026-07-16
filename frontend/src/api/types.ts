@@ -2,6 +2,27 @@ export type ClubType = "driver" | "wood" | "hybrid" | "iron" | "wedge";
 
 export const CLUB_TYPES: ClubType[] = ["driver", "wood", "hybrid", "iron", "wedge"];
 
+// Mirrors club_specification.py's CLUB_LENGTH_RANGES/LOFT_RANGES exactly --
+// the only two fields with a real type-specific valid range in the domain
+// model. head_mass/shaft_mass/grip_mass share one global range (not
+// type-specific) and lie_angle/shaft_length aren't range-validated at all,
+// so there's no principled "median" to fill in for those.
+export const CLUB_LENGTH_RANGES: Record<ClubType, [number, number]> = {
+  driver: [43.0, 48.0],
+  wood: [41.0, 43.5],
+  hybrid: [38.0, 41.0],
+  iron: [35.5, 39.0],
+  wedge: [34.5, 36.5],
+};
+
+export const LOFT_RANGES: Record<ClubType, [number, number]> = {
+  driver: [8.0, 12.0],
+  wood: [13.0, 21.0],
+  hybrid: [16.0, 28.0],
+  iron: [18.0, 47.0],
+  wedge: [46.0, 64.0],
+};
+
 export interface ClubSpecification {
   club_type: ClubType;
   head_mass: number;

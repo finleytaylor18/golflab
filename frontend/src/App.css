@@ -20,83 +20,32 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: 230px 1fr 230px;
-  grid-template-areas:
-    "spec spec spec"
-    "grip illustration head"
-    "swing shaft results";
+  grid-template-columns: 1.4fr 1fr;
   gap: 16px;
   align-items: start;
 }
 
-.panel--spec { grid-area: spec; }
-.panel--grip { grid-area: grip; }
-.panel--head { grid-area: head; }
-.panel--shaft { grid-area: shaft; }
-.panel--swing { grid-area: swing; }
-.panel--results { grid-area: results; }
-
-.illustration-container {
-  grid-area: illustration;
-  height: 460px;
+.workspace-side {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.club-illustration {
-  height: 100%;
-  width: auto;
-  max-width: 100%;
-}
-
-.ground-line {
-  stroke: var(--border);
-  stroke-width: 2;
-}
-
-.club-shaft {
-  stroke: #9aa1ac;
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.club-grip {
-  stroke: #2a2f36;
-  stroke-width: 11;
-  stroke-linecap: round;
-}
-
-@media (prefers-color-scheme: dark) {
-  .club-grip {
-    stroke: #454b55;
-  }
-}
-
-.club-head {
-  fill: var(--accent);
-  stroke: color-mix(in srgb, var(--accent) 60%, black);
-  stroke-width: 1.5;
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
 }
 
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "spec"
-      "illustration"
-      "grip"
-      "head"
-      "shaft"
-      "swing"
-      "results";
   }
+}
 
-  .illustration-container {
-    height: 320px;
+@media (max-width: 480px) {
+  .field-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -121,12 +70,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 12px;
   font-size: 13px;
-}
-
-.field:last-child {
-  margin-bottom: 0;
 }
 
 .field span {

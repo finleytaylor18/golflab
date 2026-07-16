@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { HeadPanel } from "./components/HeadPanel";
-import { ShaftPanel } from "./components/ShaftPanel";
-import { GripPanel } from "./components/GripPanel";
-import { SpecPanel } from "./components/SpecPanel";
+import { ClubSpecForm } from "./components/ClubSpecForm";
 import { SwingProfileForm } from "./components/SwingProfileForm";
 import { ResultsDisplay } from "./components/ResultsDisplay";
 import { SimulationPanel } from "./components/SimulationPanel";
-import { ClubIllustration } from "./illustrations/ClubIllustration";
 import { getSwingWeight, getMoi, getBalancePoint, ApiError } from "./api/client";
 import { DEFAULT_CLUB, DEFAULT_SWING } from "./api/types";
 import { useDebouncedValue } from "./api/useDebouncedValue";
@@ -63,24 +59,19 @@ function App() {
       </header>
 
       <div className="workspace">
-        <SpecPanel value={club} onChange={setClub} />
+        <ClubSpecForm value={club} onChange={setClub} />
 
-        <GripPanel value={club} onChange={setClub} />
-        <div className="illustration-container">
-          <ClubIllustration club={club} />
+        <div className="workspace-side">
+          <SwingProfileForm value={swing} onChange={setSwing} />
+          <ResultsDisplay
+            loading={loading}
+            error={error}
+            swingWeight={swingWeight}
+            moment={moment}
+            moi={moi}
+            balancePoint={balancePoint}
+          />
         </div>
-        <HeadPanel value={club} onChange={setClub} />
-
-        <SwingProfileForm value={swing} onChange={setSwing} />
-        <ShaftPanel value={club} onChange={setClub} />
-        <ResultsDisplay
-          loading={loading}
-          error={error}
-          swingWeight={swingWeight}
-          moment={moment}
-          moi={moi}
-          balancePoint={balancePoint}
-        />
       </div>
 
       <SimulationPanel club={club} swing={swing} />

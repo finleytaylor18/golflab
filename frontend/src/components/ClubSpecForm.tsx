@@ -1,5 +1,5 @@
 import type { ClubSpecification, ClubType } from "../api/types";
-import { CLUB_TYPES, CLUB_LENGTH_RANGES, LOFT_RANGES } from "../api/types";
+import { CLUB_TYPE_CATEGORIES, CLUB_TYPE_LABELS, CLUB_LENGTH_RANGES, LOFT_RANGES } from "../api/types";
 import { NumberField } from "./NumberField";
 
 interface Props {
@@ -41,10 +41,14 @@ export function ClubSpecForm({ value, onChange }: Props) {
             value={value.club_type}
             onChange={(event) => handleClubTypeChange(event.target.value as ClubType)}
           >
-            {CLUB_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
+            {Object.entries(CLUB_TYPE_CATEGORIES).map(([category, types]) => (
+              <optgroup key={category} label={category}>
+                {types.map((type) => (
+                  <option key={type} value={type}>
+                    {CLUB_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

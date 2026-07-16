@@ -4,25 +4,43 @@ from moment_of_inertia import calculate_moi
 from club_repository import save_club, load_club, list_club_names
 from club_comparison import compare_clubs
 from club_diagram import plot_club_diagram
-from club_specification import ClubSpecification, ClubType
+from club_specification import ClubSpecification, ClubType, CLUB_TYPE_LABELS, CLUB_TYPE_CATEGORIES
 from clubhead_composition import WeightPort, ClubHeadComposition, calculate_head_cg
 from clubhead_diagram import plot_head_composition
 
 
-def get_valid_club_type() -> ClubType:
-    options = list(ClubType)
+def _choose_from(prompt: str, options: list) -> int:
+    """Prints a numbered list of options and returns the chosen index."""
     while True:
-        print("Club types:")
-        for index, option in enumerate(options, start=1):
-            print(f"  {index}. {option.value}")
-        raw_choice = input("Choose a club type (number): ")
+        raw_choice = input(prompt)
         try:
             choice_index = int(raw_choice) - 1
             if 0 <= choice_index < len(options):
-                return options[choice_index]
+                return choice_index
         except ValueError:
             pass
         print("Invalid choice, please try again.")
+
+
+def get_valid_club_type() -> ClubType:
+    # A flat list of all 25 specific club types is unusable as a single menu,
+    # so this asks for a category first (Driver/Wood/Hybrid/Iron/Wedge), then
+    # the specific club within it -- skipping straight through for Driver
+    # since it has no sub-options.
+    category_names = list(CLUB_TYPE_CATEGORIES.keys())
+    print("Club category:")
+    for index, name in enumerate(category_names, start=1):
+        print(f"  {index}. {name}")
+    category = category_names[_choose_from("Choose a category (number): ", category_names)]
+
+    members = CLUB_TYPE_CATEGORIES[category]
+    if len(members) == 1:
+        return members[0]
+
+    print(f"{category}:")
+    for index, member in enumerate(members, start=1):
+        print(f"  {index}. {CLUB_TYPE_LABELS[member]}")
+    return members[_choose_from("Choose a specific club (number): ", members)]
 
 
 def get_valid_float(prompt: str) -> float:

@@ -6,6 +6,7 @@ import { GripPanel } from "./components/GripPanel";
 import { SpecPanel } from "./components/SpecPanel";
 import { SwingProfileForm } from "./components/SwingProfileForm";
 import { ResultsDisplay } from "./components/ResultsDisplay";
+import { SimulationPanel } from "./components/SimulationPanel";
 import { ClubScene } from "./three/ClubScene";
 import { getSwingWeight, getMoi, getBalancePoint, ApiError } from "./api/client";
 import { DEFAULT_CLUB, DEFAULT_SWING } from "./api/types";
@@ -81,6 +82,8 @@ function App() {
           balancePoint={balancePoint}
         />
       </div>
+
+      <SimulationPanel club={club} swing={swing} />
     </div>
   );
 }

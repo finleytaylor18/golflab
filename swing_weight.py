@@ -39,6 +39,8 @@ if __name__ == "__main__":
         shaft_length=45.5,
         grip_mass=50,
         club_length=45.5,
+        loft=10.5,
+        lie_angle=58.0,
     )
     moment = calculate_moment(driver)
     swing_weight = moment_to_swing_weight(moment)

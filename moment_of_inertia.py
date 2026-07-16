@@ -24,6 +24,8 @@ if __name__ == "__main__":
         shaft_length=45.5,
         grip_mass=50,
         club_length=45.5,
+        loft=10.5,
+        lie_angle=58.0,
     )
     moi = calculate_moi(driver)
     print(f"Total MOI: {moi:.2f} gram-inches^2")

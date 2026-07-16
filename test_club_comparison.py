@@ -6,10 +6,12 @@ def test_compare_clubs_calculates_correct_deltas():
     club_a = ClubSpecification(
         club_type=ClubType.DRIVER,
         head_mass=200, shaft_mass=65, shaft_length=45.5, grip_mass=50, club_length=45.5,
+        loft=10.5, lie_angle=58.0,
     )
     club_b = ClubSpecification(
         club_type=ClubType.DRIVER,
         head_mass=195, shaft_mass=60, shaft_length=45.5, grip_mass=48, club_length=45.75,
+        loft=10.5, lie_angle=58.0,
     )
 
     result = compare_clubs("A", club_a, "B", club_b)

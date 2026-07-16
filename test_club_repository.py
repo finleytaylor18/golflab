@@ -12,6 +12,8 @@ def test_save_and_load_club_round_trip(tmp_path):
         shaft_length=45.5,
         grip_mass=50,
         club_length=45.5,
+        loft=10.5,
+        lie_angle=58.0,
     )
 
     save_club("test_driver", original, data_file=test_file)

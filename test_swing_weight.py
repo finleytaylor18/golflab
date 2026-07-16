@@ -10,6 +10,8 @@ def test_calculate_moment_for_standard_driver():
         shaft_length=45.5,
         grip_mass=50,
         club_length=45.5,
+        loft=10.5,
+        lie_angle=58.0,
     )
 
     result = calculate_moment(driver)

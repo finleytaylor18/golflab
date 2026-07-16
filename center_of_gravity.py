@@ -26,6 +26,8 @@ if __name__ == "__main__":
         shaft_length=45.5,
         grip_mass=50,
         club_length=45.5,
+        loft=10.5,
+        lie_angle=58.0,
     )
     balance_point = calculate_balance_point(driver)
     print(f"Balance point: {balance_point:.2f} inches from butt end")

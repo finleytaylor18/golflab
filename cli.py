@@ -53,6 +53,8 @@ def analyze_new_club() -> None:
     shaft_length = get_valid_float("Shaft length (inches): ")
     grip_mass = get_valid_float("Grip mass (grams): ")
     club_length = get_valid_float("Club length (inches): ")
+    loft = get_valid_float("Loft (degrees): ")
+    lie_angle = get_valid_float("Lie angle (degrees): ")
 
     try:
         club = ClubSpecification(
@@ -62,6 +64,8 @@ def analyze_new_club() -> None:
             shaft_length=shaft_length,
             grip_mass=grip_mass,
             club_length=club_length,
+            loft=loft,
+            lie_angle=lie_angle,
         )
     except ValueError as error:
         print(f"Invalid club specification: {error}")

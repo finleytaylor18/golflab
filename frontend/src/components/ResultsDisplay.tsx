@@ -9,7 +9,7 @@ interface Props {
 
 export function ResultsDisplay({ loading, error, swingWeight, moment, moi, balancePoint }: Props) {
   return (
-    <div className="panel">
+    <div className="panel panel--results">
       <h2>Computed metrics</h2>
       {error && <p className="error">{error}</p>}
       {!error && (

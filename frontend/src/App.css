@@ -17,16 +17,48 @@
   margin-top: 4px;
 }
 
-.layout {
+.workspace {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 230px 1fr 230px;
+  grid-template-areas:
+    "spec spec spec"
+    "grip canvas head"
+    "swing shaft results";
   gap: 16px;
   align-items: start;
 }
 
+.panel--spec { grid-area: spec; }
+.panel--grip { grid-area: grip; }
+.panel--head { grid-area: head; }
+.panel--shaft { grid-area: shaft; }
+.panel--swing { grid-area: swing; }
+.panel--results { grid-area: results; }
+
+.canvas-container {
+  grid-area: canvas;
+  height: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 @media (max-width: 900px) {
-  .layout {
+  .workspace {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "spec"
+      "canvas"
+      "grip"
+      "head"
+      "shaft"
+      "swing"
+      "results";
+  }
+
+  .canvas-container {
+    height: 320px;
   }
 }
 

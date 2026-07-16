@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { ClubSpecForm } from "./components/ClubSpecForm";
+import { HeadPanel } from "./components/HeadPanel";
+import { ShaftPanel } from "./components/ShaftPanel";
+import { GripPanel } from "./components/GripPanel";
+import { SpecPanel } from "./components/SpecPanel";
 import { SwingProfileForm } from "./components/SwingProfileForm";
 import { ResultsDisplay } from "./components/ResultsDisplay";
+import { ClubScene } from "./three/ClubScene";
 import { getSwingWeight, getMoi, getBalancePoint, ApiError } from "./api/client";
 import { DEFAULT_CLUB, DEFAULT_SWING } from "./api/types";
 import { useDebouncedValue } from "./api/useDebouncedValue";
@@ -57,9 +61,17 @@ function App() {
         <p>Interactive club design and performance simulation</p>
       </header>
 
-      <main className="layout">
-        <ClubSpecForm value={club} onChange={setClub} />
+      <div className="workspace">
+        <SpecPanel value={club} onChange={setClub} />
+
+        <GripPanel value={club} onChange={setClub} />
+        <div className="canvas-container">
+          <ClubScene club={club} />
+        </div>
+        <HeadPanel value={club} onChange={setClub} />
+
         <SwingProfileForm value={swing} onChange={setSwing} />
+        <ShaftPanel value={club} onChange={setClub} />
         <ResultsDisplay
           loading={loading}
           error={error}
@@ -68,7 +80,7 @@ function App() {
           moi={moi}
           balancePoint={balancePoint}
         />
-      </main>
+      </div>
     </div>
   );
 }

@@ -13,7 +13,7 @@ export function ResultsDisplay({ loading, error, swingWeight, moment, moi, balan
       <h2>Computed metrics</h2>
       {error && <p className="error">{error}</p>}
       {!error && (
-        <dl className="results">
+        <dl className={loading ? "results stale" : "results"}>
           <dt>Swing weight</dt>
           <dd>
             {swingWeight ?? "—"}
@@ -25,7 +25,6 @@ export function ResultsDisplay({ loading, error, swingWeight, moment, moi, balan
           <dd>{balancePoint !== null ? `${balancePoint.toFixed(2)} in from butt` : "—"}</dd>
         </dl>
       )}
-      {loading && <p className="status">Recalculating…</p>}
     </div>
   );
 }

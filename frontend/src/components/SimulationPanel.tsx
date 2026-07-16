@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import type { ClubSpecification, SwingProfile, BallFlightResult } from "../api/types";
 import { getBallFlight, ApiError } from "../api/client";
-import { TrajectoryCharts } from "./TrajectoryCharts";
+import { Spinner } from "./Spinner";
+
+// recharts is only needed once a simulation has actually run -- keeping it
+// out of the initial bundle means the page paints without waiting on it.
+const TrajectoryCharts = lazy(() =>
+  import("./TrajectoryCharts").then((m) => ({ default: m.TrajectoryCharts })),
+);
 
 interface Props {
   club: ClubSpecification;
@@ -32,6 +38,7 @@ export function SimulationPanel({ club, swing }: Props) {
       <div className="simulation-header">
         <h2>Ball flight simulation</h2>
         <button type="button" onClick={runSimulation} disabled={loading}>
+          {loading && <span className="button-spinner" aria-hidden="true" />}
           {loading ? "Simulating…" : "Run simulation"}
         </button>
       </div>
@@ -39,7 +46,7 @@ export function SimulationPanel({ club, swing }: Props) {
       {error && <p className="error">{error}</p>}
 
       {result && (
-        <>
+        <div className={loading ? "stale" : undefined}>
           <dl className="results results--simulation">
             <dt>Carry distance</dt>
             <dd>{result.trajectory.carry_distance.toFixed(1)} yd</dd>
@@ -59,11 +66,16 @@ export function SimulationPanel({ club, swing }: Props) {
             <dd>{result.launch_conditions.sidespin.toFixed(0)} rpm</dd>
           </dl>
 
-          <TrajectoryCharts points={result.trajectory.points} />
-        </>
+          <Suspense fallback={<Spinner label="Loading charts…" />}>
+            <TrajectoryCharts points={result.trajectory.points} />
+          </Suspense>
+        </div>
       )}
 
-      {!result && !error && <p className="status">Set up a club and swing profile above, then run a simulation.</p>}
+      {!result && !error && !loading && (
+        <p className="status">Set up a club and swing profile above, then run a simulation.</p>
+      )}
+      {!result && loading && <Spinner label="Running simulation…" />}
     </div>
   );
 }

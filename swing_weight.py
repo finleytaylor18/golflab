@@ -6,6 +6,14 @@ GRIP_CENTER_FROM_BUTT = 5.0        # inches, assumed grip midpoint
 A0_REFERENCE_MOMENT = 3401.9   # gram-inches, calibrated from industry D0 reference example
 POINTS_PER_INCREMENT = 49.61   # gram-inches per swing weight point (verified: 1.75 oz-in/point)
 
+# NOTE: This model treats the head as a point mass at the club's full length,
+# and the shaft as uniformly distributed. Real clubheads have their center of
+# mass slightly inboard of the tip, and real shafts often taper. As a result,
+# this model tends to estimate swing weight somewhat higher than a physically
+# measured club. This is a documented v1 simplification, not a bug — refining
+# it requires real calibration data from an actual assembled club, not guessed
+# constants.
+
 
 def calculate_moment(club: ClubSpecification) -> float:
     head_distance = club.club_length - FULCRUM_DISTANCE_FROM_BUTT

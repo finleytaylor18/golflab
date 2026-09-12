@@ -6,3 +6,4 @@ clubs.json
 .claude/
 heads.json
 *forgiveness*.png
+!docs/figures/*.png

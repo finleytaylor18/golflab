@@ -2,6 +2,8 @@
 
 **Status:** Phase 1 (concept only). No code has been written against this yet.
 **Scope:** clubhead mass properties + strike location → ball launch conditions.
+**Companion:** [`impact_architecture.md`](impact_architecture.md) — the coordinate frame
+(with diagram), data model, validation and file layout that implement this physics.
 **Out of scope for v1:** ball flight, face flexibility, bulge and roll, shaft dynamics,
 face angle / club path (square face assumed), pre-impact head rotation, left-handed heads.
 

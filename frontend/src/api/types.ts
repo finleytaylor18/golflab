@@ -175,3 +175,151 @@ export const DEFAULT_SWING: SwingProfile = {
   face_angle: 0.5,
   dynamic_loft: 13,
 };
+
+// ---------------------------------------------------------------------------
+// IMPACT MODEL AND FORGIVENESS MAPS
+// ---------------------------------------------------------------------------
+//
+// Every field is in industry units, matching api_schemas.py. The physics core
+// is SI and converts at the boundary, so nothing here is ever in kg or metres.
+//
+// Sign conventions, which are easy to get backwards and expensive to get
+// wrong (see head_mass_properties.py):
+//   +x is toward the HEEL, so a toe strike is negative x
+//   +y is toward the crown
+//   cg_z is NEGATIVE -- the centre of mass lies behind the face plane
+
+export interface HeadMassProperties {
+  mass_g: number;
+  cg_x_mm: number;
+  cg_y_mm: number;
+  cg_z_mm: number;
+  i_xx_g_cm2: number;
+  i_yy_g_cm2: number;
+  i_zz_g_cm2: number;
+  i_xy_g_cm2: number;
+  i_xz_g_cm2: number;
+  i_yz_g_cm2: number;
+  face_half_width_mm: number;
+  face_half_height_mm: number;
+  face_shape: "ellipse" | "rectangle";
+  face_outline_is_measured: boolean;
+}
+
+export interface ImpactConditions {
+  clubhead_speed_mph: number;
+  loft_deg: number;
+}
+
+export interface MapSettings {
+  spacing_mm: number;
+  retention_threshold_pct: number;
+}
+
+export interface ConformanceReport {
+  rules_frame_moi_g_cm2: number;
+  limit_g_cm2: number;
+  limit_with_tolerance_g_cm2: number;
+  conforms: boolean;
+  citation: string;
+}
+
+export interface MapSummary {
+  threshold_pct: number;
+  threshold_is_a_chosen_setting: boolean;
+  forgiving_area_mm2: number;
+  face_area_mm2: number;
+  forgiving_area_fraction: number;
+  sweet_spot_ball_speed_mph: number;
+  worst_retention_pct: number;
+  max_abs_sidespin_rpm: number;
+  backspin_range_rpm: [number, number];
+  points_needing_more_friction: number;
+  points_with_reversed_backspin: number;
+  face_description: string;
+}
+
+// Null marks a grid point outside the face outline. JSON has no NaN, so the
+// backend converts it (see api_schemas._grid_to_json).
+export type Grid = (number | null)[][];
+
+export interface ForgivenessMapResult {
+  x_mm: number[];
+  y_mm: number[];
+  on_face: boolean[][];
+  ball_speed_mph: Grid;
+  speed_retention_pct: Grid;
+  backspin_rpm: Grid;
+  sidespin_rpm: Grid;
+  spin_axis_deg: Grid;
+  launch_angle_deg: Grid;
+  required_friction: Grid;
+  exceeds_friction: boolean[][];
+  backspin_reversed: boolean[][];
+  sweet_spot_mm: [number, number];
+  face_centre_mm: [number, number];
+  summary: MapSummary;
+  head_description: string;
+  ball_description: string;
+  conditions_description: string;
+  face_description: string;
+  conformance: ConformanceReport;
+}
+
+export interface MapComparisonResult {
+  name_a: string;
+  name_b: string;
+  x_mm: number[];
+  y_mm: number[];
+  on_face: boolean[][];
+  delta_speed_retention_pct: Grid;
+  delta_ball_speed_mph: Grid;
+  delta_backspin_rpm: Grid;
+  delta_sidespin_rpm: Grid;
+  delta_launch_angle_deg: Grid;
+  summary_a: MapSummary;
+  summary_b: MapSummary;
+}
+
+export interface ImpactResult {
+  launch: {
+    ball_speed_mph: number;
+    launch_angle_deg: number;
+    horizontal_launch_deg: number;
+    backspin_rpm: number;
+    sidespin_rpm: number;
+    smash_factor: number;
+    effective_mass_g: number;
+    contact: string;
+    required_friction: number;
+    energy_lost_j: number;
+  };
+  on_face: boolean;
+  conformance: ConformanceReport;
+  ball_description: string;
+}
+
+// A plausible driver head, used only to populate the form so the panel opens
+// on something that runs. NOT a real product and never presented as one --
+// the numbers are round because they are invented.
+export const DEFAULT_HEAD: HeadMassProperties = {
+  mass_g: 200,
+  cg_x_mm: 0,
+  cg_y_mm: 0,
+  cg_z_mm: -35,
+  i_xx_g_cm2: 3000,
+  i_yy_g_cm2: 5000,
+  i_zz_g_cm2: 4000,
+  i_xy_g_cm2: 0,
+  i_xz_g_cm2: 0,
+  i_yz_g_cm2: 0,
+  face_half_width_mm: 50,
+  face_half_height_mm: 30,
+  face_shape: "ellipse",
+  face_outline_is_measured: false,
+};
+
+export const DEFAULT_MAP_SETTINGS: MapSettings = {
+  spacing_mm: 2,
+  retention_threshold_pct: 97,
+};

@@ -4,6 +4,7 @@ import { ClubSpecForm } from "./components/ClubSpecForm";
 import { SwingProfileForm } from "./components/SwingProfileForm";
 import { ResultsDisplay } from "./components/ResultsDisplay";
 import { SimulationPanel } from "./components/SimulationPanel";
+import { ForgivenessPanel } from "./components/ForgivenessPanel";
 import { getSwingWeight, getMoi, getBalancePoint, ApiError } from "./api/client";
 import { DEFAULT_CLUB, DEFAULT_SWING } from "./api/types";
 import { useDebouncedValue } from "./api/useDebouncedValue";
@@ -75,6 +76,8 @@ function App() {
       </div>
 
       <SimulationPanel club={club} swing={swing} />
+
+      <ForgivenessPanel club={club} swing={swing} />
     </div>
   );
 }

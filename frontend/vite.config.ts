@@ -11,6 +11,7 @@ export default defineConfig({
     proxy: {
       '/calculations': 'http://localhost:8000',
       '/clubs': 'http://localhost:8000',
+      '/heads': 'http://localhost:8000',
     },
   },
 })

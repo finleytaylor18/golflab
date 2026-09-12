@@ -19,11 +19,31 @@ One head-fixed, right-handed frame. **Origin at the geometric centre of the face
 
 | Axis | Direction | Positive toward |
 |---|---|---|
-| `x̂` | across the face | **toe** (heel → toe) |
+| `x̂` | across the face | **heel** (toe → heel) |
 | `ŷ` | up the face | **crown** (sole → crown) |
 | `ẑ` | face normal | **outward**, away from the face (toward ball / target) |
 
 ✅ Verified right-handed: `x̂ × ŷ = ẑ`.
+
+> 🔧 **Corrected in Phase 3.** This table originally read `x̂ → toe`, and claimed
+> right-handedness on the strength of the abstract identity `x̂ × ŷ = ẑ`. That identity is
+> true of *any* right-handed frame by definition, so it proved nothing about whether these
+> three **physical** directions form one. They do not. For a right-handed club, with the
+> crown up and the face normal down the target line, the toe lies on the opposite side from
+> the golfer, and `toe × crown = −outward`: the triad **(toe, crown, outward) is
+> left-handed**. Cross products, inertia-tensor rotations and angular momentum all assume a
+> right-handed frame, so exactly one axis had to flip.
+>
+> `x̂` is the one to flip, for two reasons. First, it is the only flip that leaves the **face
+> normal** and the **vertical axis** alone — every equation in `impact_model.md` is written
+> around those two, and the sole–crown axis carries the strongest physical intuition
+> (launch angle, backspin). Second, it is the better choice for **plotting**: drawn with
+> `+x` rightward and `+y` upward, a forgiveness map becomes a true face-on view of the club,
+> toe on the left — which is how a driver face is photographed and how a launch monitor
+> draws its impact pattern.
+>
+> **Consequence:** a toe strike is `x < 0`, a heel strike `x > 0`. Nothing else in this
+> document changes; `d = −cg_z` and the sweet spot `(cg_x, cg_y, 0)` are unaffected.
 
 All conventions are for a **right-handed head**. A left-handed head is the mirror image
 (`x̂ → −x̂`), deferred per the Phase 1 scope.
@@ -56,7 +76,8 @@ just `inertia`. Getting this wrong is a silent, plausible-looking error, so §3 
 ### 1.3 Diagram
 
 ```
-   FACE-ON  —  looking at the face from in front (along −ẑ; ẑ comes out of the page)
+   FACE-ON  —  looking at the face from in front (along −ẑ; ẑ comes out of the page).
+                This is the view a launch monitor draws: toe on the left, heel on the right.
 
                                ŷ  crown
                                ▲
@@ -66,7 +87,7 @@ just `inertia`. Getting this wrong is a silent, plausible-looking error, so §3 
         ║           ╲          │                      ║     ★  S = sweet spot
         ║            ╲  b      │                      ║     ●  P = strike point
         ║             ● P      │                      ║     b  = P − S  (moment arm)
-   heel ║                      ⊕──────────────────────╫──▶  x̂  toe
+    toe ║                      ⊕──────────────────────╫──▶  x̂  heel
         ║                                             ║
         ║                                             ║
         ╚═════════════════════════════════════════════╝
@@ -79,7 +100,7 @@ just `inertia`. Getting this wrong is a silent, plausible-looking error, so §3 
 
    PLAN  —  looking down from above (along −ŷ; ŷ comes out of the page)
 
-          x̂ toe
+         x̂ heel
             ▲
             │
     ┌───────┴────────┐▐

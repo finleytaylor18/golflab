@@ -423,6 +423,22 @@ apart from the solver that consumes and produces them.
 Phase 4 adds `forgiveness_map.py` (computation) and `forgiveness_diagram.py` (matplotlib),
 keeping the project's calculation/display separation.
 
+> 🔧 **As built (Phase 4).** Three modules, not two. `head_repository.py` was added alongside
+> them, mirroring `club_repository.py` exactly (module-level functions, JSON on disk, injected
+> `data_file`). The reason is practical: running a map needs a head, a head is a mass, a CG and
+> a six-component tensor, and re-typing that for every run makes the CLI option unusable. Heads
+> are stored in **industry units** — the file is an input/output boundary, so grams, millimetres
+> and g·cm² are correct there, and a saved head can be checked by eye against a Fusion
+> properties panel.
+>
+> `FaceGeometry` also gained a `shape` field, defaulting to **ellipse**. A rectangle of the same
+> half-extents has 4/π ≈ 27% more area, and since the sweep's summary metric is an *area*, a
+> rectangular outline would inflate it by a quarter.
+>
+> `cli.py` gained two menu options (forgiveness map; compare two saved heads) and its
+> `if __name__ == "__main__"` block moved to the end of the file so the new functions are
+> defined before `main()` runs. Nothing existing was otherwise modified.
+
 **Nothing existing is modified.** `ball_flight.py` in particular stays untouched, as agreed —
 including its mislabelled `BALL_MASS` comment, which is logged in `impact_model.md` §11 for a
 separate approval.

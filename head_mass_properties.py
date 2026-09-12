@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from units import g_cm2_to_kg_m2, grams_to_kg, kg_m2_to_g_cm2, mm_to_m
+from units import g_cm2_to_kg_m2, grams_to_kg, kg_m2_to_g_cm2, m_to_mm, mm_to_m
 
 # Equipment Rules, Part 2 Section 4b(i), p.54: the moment of inertia about the
 # vertical axis through the clubhead's centre of gravity, with the club at a 60
@@ -53,25 +53,53 @@ _TRIANGLE_RTOL = 1e-9
 
 @dataclass
 class FaceGeometry:
-    """Flat rectangular face bounds, used to limit the forgiveness sweep.
+    """Flat face bounds, used to limit the forgiveness sweep.
 
-    v1 assumes a flat face: no bulge, no roll. The outline is deliberately
-    crude because the impact solver never looks at it -- only the Phase 4
-    sweep does, to decide which grid points lie on the face.
+    v1 assumes a flat face: no bulge, no roll. The impact solver never looks
+    at this at all -- only the forgiveness sweep does, to decide which grid
+    points lie on the face and how large that face is.
+
+    The outline defaults to an ELLIPSE because a driver face is far closer to
+    one than to a rectangle, and the difference is not cosmetic: a rectangle
+    of the same half-extents has 4/pi, about 27%, more area. Since the sweep's
+    summary metric is "how much face area keeps at least X% of ball speed",
+    a rectangular outline would inflate that number by a quarter.
+
+    `outline_is_measured` stays False until the outline comes from real
+    geometry. Everything that draws a face must say so when it is False --
+    an assumed outline produces an assumed area.
     """
 
     half_width_m: float    # x half-extent, heel <-> toe
     half_height_m: float   # y half-extent, sole <-> crown
     outline_is_measured: bool = False
+    shape: str = "ellipse"
 
     def __post_init__(self):
         for name, value in (("half_width_m", self.half_width_m),
                             ("half_height_m", self.half_height_m)):
             if not math.isfinite(value) or value <= 0:
                 raise ValueError(f"{name} must be a positive, finite length (got {value})")
+        if self.shape not in {"ellipse", "rectangle"}:
+            raise ValueError(f"shape must be 'ellipse' or 'rectangle' (got {self.shape!r})")
 
     def contains(self, x_m: float, y_m: float) -> bool:
-        return abs(x_m) <= self.half_width_m and abs(y_m) <= self.half_height_m
+        if self.shape == "rectangle":
+            return abs(x_m) <= self.half_width_m and abs(y_m) <= self.half_height_m
+        return ((x_m / self.half_width_m) ** 2
+                + (y_m / self.half_height_m) ** 2) <= 1.0
+
+    @property
+    def area_m2(self) -> float:
+        """Total face area, for expressing the sweep's summary metric."""
+        box = self.half_width_m * self.half_height_m
+        return math.pi * box if self.shape == "ellipse" else 4.0 * box
+
+    def describe(self) -> str:
+        """One line naming the outline and whether it can be trusted."""
+        source = "measured" if self.outline_is_measured else "ASSUMED (not measured)"
+        return (f"{self.shape} outline, {m_to_mm(2 * self.half_width_m):.0f} x "
+                f"{m_to_mm(2 * self.half_height_m):.0f} mm, {source}")
 
 
 @dataclass

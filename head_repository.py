@@ -38,7 +38,7 @@ def save_head(name: str, head: HeadMassProperties, data_file: Path = DATA_FILE) 
         "face_half_width_mm": m_to_mm(head.face.half_width_m),
         "face_half_height_mm": m_to_mm(head.face.half_height_m),
         "face_shape": head.face.shape,
-        "face_outline_is_measured": head.face.outline_is_measured,
+        "face_outline_source": head.face.outline_source,
     }
     data_file.write_text(json.dumps(heads, indent=2))
 
@@ -57,7 +57,12 @@ def load_head(name: str, data_file: Path = DATA_FILE) -> HeadMassProperties:
         face_half_height_mm=data["face_half_height_mm"],
     )
     head.face.shape = data.get("face_shape", "ellipse")
-    head.face.outline_is_measured = data.get("face_outline_is_measured", False)
+    # Files written before outline_source existed carry a boolean; honour it.
+    if "face_outline_source" in data:
+        head.face.outline_source = data["face_outline_source"]
+    else:
+        head.face.outline_source = "measured" if data.get("face_outline_is_measured") else "assumed"
+    head.face.__post_init__()
     return head
 
 

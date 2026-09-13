@@ -14,6 +14,8 @@ from head_mass_properties import strike_from_toe_crown_mm
 from head_repository import save_head, load_head, list_head_names
 from impact_model import solve_impact
 from forgiveness_map import compute_forgiveness_map, compare_maps
+from head_geometry import design_mass_properties
+from head_design_repository import save_design, load_design, list_design_names
 from api_schemas import (
     ClubSpecificationRequest, to_club_specification,
     to_swing_profile,
@@ -23,6 +25,8 @@ from api_schemas import (
     to_swing_conditions, to_map_settings,
     ImpactRequest, ForgivenessMapRequest, ForgivenessCompareRequest, SaveHeadRequest,
     forgiveness_map_to_payload, map_comparison_to_payload, head_to_request_payload,
+    HeadDesignRequest, SaveDesignRequest, to_head_design,
+    design_result_to_payload, design_to_payload,
 )
 
 app = FastAPI(title="GolfLab API")
@@ -214,6 +218,54 @@ def load_head_endpoint(name: str):
         raise HTTPException(status_code=404, detail=str(error))
     except ValueError as error:
         # A hand-edited heads.json can hold a tensor that no longer validates.
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+# ---------------------------------------------------------------------------
+# PARAMETRIC HEAD DESIGN
+# ---------------------------------------------------------------------------
+
+
+def _build_design(request: HeadDesignRequest):
+    """Every design rule raises ValueError; 422 is the right answer for all of
+    them -- well-formed JSON that does not describe a head."""
+    try:
+        return to_head_design(request)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@app.post("/calculations/head-design")
+def head_design_endpoint(request: HeadDesignRequest):
+    """Derive a head from a design: the head itself (in the shape the
+    forgiveness-map endpoint accepts), the per-part breakdown, the
+    conformance trio and any warnings."""
+    design = _build_design(request)
+    try:
+        result = design_mass_properties(design)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return design_result_to_payload(result)
+
+
+@app.post("/designs", status_code=201)
+def save_design_endpoint(request: SaveDesignRequest):
+    save_design(request.name, _build_design(request.design))
+    return {"name": request.name}
+
+
+@app.get("/designs")
+def list_designs_endpoint():
+    return list_design_names()
+
+
+@app.get("/designs/{name}")
+def load_design_endpoint(name: str):
+    try:
+        return design_to_payload(load_design(name))
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 

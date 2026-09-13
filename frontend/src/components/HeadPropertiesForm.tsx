@@ -89,10 +89,15 @@ export function HeadPropertiesForm({ value, massFromClub, onChange }: Props) {
               <option value="rectangle">Rectangle</option>
             </select>
           </label>
-          <label className="field field--check">
-            <input type="checkbox" checked={value.face_outline_is_measured}
-              onChange={(event) => set("face_outline_is_measured", event.target.checked)} />
-            <span>Outline measured from real geometry</span>
+          <label className="field">
+            <span>Outline source</span>
+            <select value={value.face_outline_source}
+              onChange={(event) =>
+                set("face_outline_source", event.target.value as "assumed" | "design" | "measured")}>
+              <option value="assumed">Assumed (a guess)</option>
+              <option value="design">From a parametric design</option>
+              <option value="measured">Measured from real geometry</option>
+            </select>
           </label>
         </div>
         <p className="hint">

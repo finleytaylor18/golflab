@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import type {
-  ClubSpecification, SwingProfile, HeadMassProperties,
+  ClubSpecification, SwingProfile, HeadMassProperties, HeadDesign, DesignResult,
   ForgivenessMapResult, MapComparisonResult, Grid, MapSettings,
 } from "../api/types";
-import { DEFAULT_HEAD, DEFAULT_MAP_SETTINGS } from "../api/types";
+import { DEFAULT_HEAD, DEFAULT_DESIGN, DEFAULT_MAP_SETTINGS } from "../api/types";
 import { getForgivenessMap, getForgivenessComparison, ApiError } from "../api/client";
 import { HeadPropertiesForm } from "./HeadPropertiesForm";
+import { HeadDesignForm } from "./HeadDesignForm";
 import { ForgivenessHeatmap, type HoverPoint } from "./ForgivenessHeatmap";
 import { Spinner } from "./Spinner";
 import type { RampName } from "./colourScales";
@@ -92,8 +93,17 @@ function areaAtThreshold(map: ForgivenessMapResult, threshold: number) {
 
 export function ForgivenessPanel({ club, swing }: Props) {
   const [head, setHead] = useState<HeadMassProperties>(DEFAULT_HEAD);
+  // Where the head comes from: designed parametrically, or typed in as
+  // measured / CAD mass properties. The map does not care which.
+  const [source, setSource] = useState<"design" | "manual">("design");
+  const [design, setDesign] = useState<HeadDesign>(DEFAULT_DESIGN);
+  const [derived, setDerived] = useState<DesignResult | null>(null);
   const [settings, setSettings] = useState<MapSettings>(DEFAULT_MAP_SETTINGS);
   const [map, setMap] = useState<ForgivenessMapResult | null>(null);
+  // The head the current map was swept with, so a later edit to the design
+  // (or the typed-in properties) can be shown as making the map stale rather
+  // than leaving two different heads' numbers on one page.
+  const [sweptHead, setSweptHead] = useState<HeadMassProperties | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,13 +131,21 @@ export function ForgivenessPanel({ club, swing }: Props) {
     [head, club.head_mass],
   );
 
+  // In design mode the mass is the design's own budget, not the club spec's
+  // -- the design IS the head. The two are shown side by side so a mismatch
+  // is visible rather than silently resolved either way.
+  const activeHead: HeadMassProperties | null =
+    source === "design" ? (derived ? derived.head : null) : headWithClubMass;
+
   async function runMap() {
     setLoading(true);
     setError(null);
     setComparison(null);
     try {
-      const result = await getForgivenessMap(headWithClubMass, conditions, settings);
+      if (!activeHead) throw new ApiError("The design has not derived a valid head yet.");
+      const result = await getForgivenessMap(activeHead, conditions, settings);
       setMap(result);
+      setSweptHead(activeHead);
       setPinned(null);
     } catch (err) {
       setMap(null);
@@ -142,8 +160,9 @@ export function ForgivenessPanel({ club, swing }: Props) {
     setComparing(true);
     setError(null);
     try {
+      if (!activeHead) throw new ApiError("The design has not derived a valid head yet.");
       const result = await getForgivenessComparison(
-        baseline.label, baseline.head, "current head", headWithClubMass,
+        baseline.label, baseline.head, "current head", activeHead,
         conditions, settings,
       );
       setComparison(result);
@@ -158,13 +177,16 @@ export function ForgivenessPanel({ club, swing }: Props) {
   const metric = METRICS.find((entry) => entry.key === metricKey) ?? METRICS[0];
   const deltaMetric = DELTA_METRICS.find((entry) => entry.key === metricKey) ?? DELTA_METRICS[0];
   const readoutPoint = hover ?? pinned;
+  const mapIsStale =
+    map !== null && sweptHead !== null && activeHead !== null &&
+    JSON.stringify(sweptHead) !== JSON.stringify(activeHead);
   const liveArea = map ? areaAtThreshold(map, settings.retention_threshold_pct) : null;
 
   return (
     <div className="panel panel--forgiveness">
       <div className="simulation-header">
         <h2>Impact model &amp; forgiveness map</h2>
-        <button type="button" onClick={runMap} disabled={loading}>
+        <button type="button" onClick={runMap} disabled={loading || !activeHead}>
           {loading && <span className="button-spinner" aria-hidden="true" />}
           {loading ? "Sweeping…" : map ? "Re-run sweep" : "Run sweep"}
         </button>
@@ -178,7 +200,26 @@ export function ForgivenessPanel({ club, swing }: Props) {
         impact depends on loft relative to the head's <em>path</em>, not to the horizon).
       </p>
 
-      <HeadPropertiesForm value={head} massFromClub={club.head_mass} onChange={setHead} />
+      <div className="metric-tabs">
+        <button type="button" className={source === "design" ? "tab tab--active" : "tab"}
+          onClick={() => setSource("design")}>Design it</button>
+        <button type="button" className={source === "manual" ? "tab tab--active" : "tab"}
+          onClick={() => setSource("manual")}>Type in mass properties</button>
+        {source === "design" && derived && (
+          <span className="status">
+            Design mass {derived.mass_g.toFixed(0)} g
+            {Math.abs(derived.mass_g - club.head_mass) > 0.5 && (
+              <span className="warn"> — club spec says {club.head_mass.toFixed(0)} g</span>
+            )}
+          </span>
+        )}
+      </div>
+
+      {source === "design" ? (
+        <HeadDesignForm value={design} onChange={setDesign} onDerived={setDerived} />
+      ) : (
+        <HeadPropertiesForm value={head} massFromClub={club.head_mass} onChange={setHead} />
+      )}
 
       {error && <p className="error">{error}</p>}
       {!map && loading && <Spinner label="Solving every point on the face…" />}
@@ -186,8 +227,15 @@ export function ForgivenessPanel({ club, swing }: Props) {
         <p className="status">Enter the head's mass properties, then run the sweep.</p>
       )}
 
+      {map && mapIsStale && (
+        <p className="caveat caveat--warn">
+          The head has changed since this map was swept — the map and its numbers below
+          belong to the previous head. Re-run the sweep to update them.
+        </p>
+      )}
+
       {map && (
-        <div className={loading ? "stale" : undefined}>
+        <div className={loading || mapIsStale ? "stale" : undefined}>
           {/* Hidden while comparing: this conformance figure belongs to the
               head that was swept, and in comparison mode the form may have
               moved on to a different one. Showing it there would label the
@@ -454,8 +502,9 @@ export function ForgivenessPanel({ club, swing }: Props) {
           </div>
 
           <div className="compare-row">
-            <button type="button" onClick={() => {
-              setBaseline({ head: headWithClubMass, label: "baseline" });
+            <button type="button" disabled={!activeHead} onClick={() => {
+              if (!activeHead) return;
+              setBaseline({ head: activeHead, label: "baseline" });
               setComparison(null);
             }}>
               Set current head as baseline

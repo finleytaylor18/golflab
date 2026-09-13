@@ -246,3 +246,60 @@ def test_the_default_map_request_is_usable_as_sent():
 
     assert settings.spacing_mm == 2.0
     assert settings.retention_threshold_pct == 97.0
+
+
+# ---------------------------------------------------------------------------
+# PARAMETRIC HEAD DESIGN
+# ---------------------------------------------------------------------------
+
+from api_schemas import (HeadDesignRequest, SaveDesignRequest, design_result_to_payload,
+                         design_to_payload, to_head_design)
+from head_geometry import MeshResolution, default_design, design_mass_properties
+
+
+def test_a_design_round_trips_through_the_wire_format():
+    """Proves the request model carries the whole design and nothing else:
+    serialise, rebuild, and the dataclass compares equal.
+    """
+    original = default_design()
+    rebuilt = to_head_design(HeadDesignRequest(**design_to_payload(original)))
+    assert rebuilt == original
+
+
+def test_an_impossible_design_is_rejected_at_the_boundary():
+    """Proves the design rules apply to data arriving over HTTP; each raises
+    ValueError, which the endpoint turns into a 422.
+    """
+    payload = design_to_payload(default_design())
+    payload["face_width_mm"] = 120.0                        # equals 2a
+    with pytest.raises(ValueError, match="face_width_mm"):
+        to_head_design(HeadDesignRequest(**payload))
+
+    payload = design_to_payload(default_design())
+    payload["weights"][0]["back_mm"] = 400.0
+    with pytest.raises(ValueError, match="outside the head's bounding box"):
+        to_head_design(HeadDesignRequest(**payload))
+
+
+def test_the_design_payload_is_json_safe_and_feeds_the_map_directly():
+    """Proves the derived head comes back in the exact shape the forgiveness
+    map request accepts, so the browser can post it on unchanged -- and that
+    the whole payload is valid JSON.
+    """
+    from dataclasses import replace
+    result = design_mass_properties(replace(default_design(), mesh=MeshResolution(60, 120)))
+    payload = design_result_to_payload(result)
+    json.dumps(payload, allow_nan=False)
+
+    head = to_head_mass_properties(HeadMassPropertiesRequest(**payload["head"]))
+    assert head.mass_kg == pytest.approx(result.head.mass_kg, rel=1e-12)
+    assert head.face.outline_source == "design"
+    assert abs(sum(p["mass_share"] for p in payload["breakdown"]) - 1.0) < 1e-12
+    assert payload["conformance"]["conforms"] is True
+    assert payload["design"]["name"] == default_design().name
+
+
+def test_a_save_design_request_carries_the_name_separately():
+    request = SaveDesignRequest(name="my design", design=HeadDesignRequest(**design_to_payload(default_design())))
+    assert to_head_design(request.design) == default_design()
+    assert request.name == "my design"

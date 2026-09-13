@@ -48,11 +48,12 @@ def test_the_face_outline_and_its_provenance_survive(tmp_path):
     data_file = tmp_path / "heads.json"
     head = HeadMassProperties.from_industry_units(
         200.0, (0.0, 0.0, -35.0), np.diag([3000.0, 5000.0, 4000.0]))
-    head.face = FaceGeometry(0.057, 0.029, outline_is_measured=True, shape="ellipse")
+    head.face = FaceGeometry(0.057, 0.029, outline_source="measured", shape="ellipse")
 
     save_head("measured head", head, data_file)
     restored = load_head("measured head", data_file)
 
+    assert restored.face.outline_source == "measured"
     assert restored.face.outline_is_measured is True
     assert restored.face.shape == "ellipse"
     assert restored.face.half_width_m == pytest.approx(0.057, rel=1e-12)
@@ -95,3 +96,20 @@ def test_a_reloaded_head_is_still_validated(tmp_path):
 
     with pytest.raises(ValueError, match="triangle inequality"):
         load_head("head one", data_file)
+
+
+def test_a_file_written_before_outline_source_existed_still_loads(tmp_path):
+    """Proves backward compatibility: heads saved with the old boolean key
+    `face_outline_is_measured` map onto the new `outline_source`, so an
+    existing heads.json keeps working after the change.
+    """
+    data_file = tmp_path / "heads.json"
+    save_head("old", fixture_symmetric_head(), data_file)
+    stored = json.loads(data_file.read_text())
+    del stored["old"]["face_outline_source"]
+    stored["old"]["face_outline_is_measured"] = True
+    data_file.write_text(json.dumps(stored))
+
+    restored = load_head("old", data_file)
+    assert restored.face.outline_source == "measured"
+    assert restored.face.outline_is_measured is True

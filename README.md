@@ -12,6 +12,7 @@ GolfLab models golf clubs as structured engineering data and provides validated 
 - **Clubhead weight distribution** — models a clubhead as several discrete weight ports (e.g. toe, heel, back) at 2D positions within the head, computes the head's own local center of gravity, and renders a 2D diagram — similar in spirit to perimeter-weighting / movable-weight-system design.
 - **Ball flight prediction** — combines a club specification and a player's swing profile (clubhead speed, attack angle, swing path, face angle, dynamic loft) into launch conditions and a numerically simulated trajectory (carry distance, peak height, lateral deviation, shot shape).
 - **Prototype comparison** — compares two saved clubs side by side, showing not just their individual results but the calculated delta between them, so a designer can see exactly what effect a design change had.
+- **Parametric head design** — describe a clubhead as a thin ellipsoidal shell cut at the face plane, a face plate, a hosel and weights, each with a mass, and get its centre of gravity and full inertia tensor derived from that geometry — plus a per-part breakdown of which component owns the MOI and a check against the Rules' dimension, volume and MOI limits. No CAD needed; the same integrator will read a CAD mesh when one exists.
 - **Impact model and forgiveness map** — a rigid-body impulse–momentum model of the ball–face collision. Given a clubhead's mass, centre of gravity and full inertia tensor (as exported from CAD) and a strike location, it predicts ball speed, launch angle, backspin and sidespin from first principles; sweeping the strike across the face produces a forgiveness map, with a two-head difference map for design comparison.
 
 Club specifications are validated on creation against 25 specific club types (driver, 3/5/7 wood, 2/3/4 hybrid, 2-9 iron, and wedges by loft in 2-degree increments from 46° to 64°), each with its own length and loft range, and can be saved and reloaded, so prototypes persist across sessions rather than existing only for a single run.
@@ -28,6 +29,7 @@ Club specifications are validated on creation against 25 specific club types (dr
 - Prototype comparison with calculated deltas
 - Impact model: effective mass, gear effect, and stick/slip friction from a clubhead's inertia tensor — every constant sourced to the R&A/USGA Equipment Rules or the literature, with page numbers
 - Forgiveness maps (ball speed retention, sidespin, backspin, launch angle) as matplotlib figures from the CLI and as an interactive canvas in the web app, plus a B − A comparison map
+- Parametric head geometry: a truncated ellipsoidal shell with crown/sole split, face plate, hosel and weights → mass, CG and inertia tensor by numerical integration, with a per-part breakdown and the Rules' dimension/volume/MOI limits reported
 - Command-line interface with input validation and error handling
 - FastAPI backend exposing every calculation and persistence operation as an HTTP endpoint
 - Full pytest test coverage, including isolated tests for file-based persistence
@@ -100,6 +102,23 @@ retention threshold and watch the forgiving area recompute, and compare two
 heads. Head mass properties are entered in the units Fusion 360 reports them
 in (g, mm, g·cm²); the physics core is SI throughout.
 
+### Where the head comes from
+
+The impact model needs a head's mass, centre of gravity and inertia tensor. If you have
+them — from a CAD package or a measurement — type them in. If you don't, **design one**: the
+web panel's *Design it* mode and CLI option 8 take a handful of dimensions and a mass
+budget, derive the tensor numerically, and feed it straight into the map.
+
+![Forgiveness map of a parametric placeholder design](docs/figures/design_v1_forgiveness_example.png)
+
+*`design_v1` is a placeholder design to edit, not a product. Its sweet spot sits 2.7 mm toward
+the heel and 3 mm low — the hosel's pull, which a symmetric test fixture can never show.*
+
+The shape is an idealisation, and the model says how much that can matter: a rectangular-box
+shell with the same mass and outer dimensions gives a tensor about 1.3× larger, and a real
+driver lies between the two. Comparisons between designs are trustworthy well before absolute
+numbers are — see [`docs/head_geometry.md`](docs/head_geometry.md) for the validation.
+
 The physics, sources, assumptions, validity range and validation results are in
 [`docs/impact_model.md`](docs/impact_model.md). Two of the validation checks are
 exact reproductions of published equations (Penner 2003 eq. 6, and the R&A/USGA
@@ -156,5 +175,8 @@ These are documented, intentional simplifications for a first version — refini
 - [x] Ball flight simulation panel with shot-shape charting
 - [x] Impact model v1: effective mass, gear effect, stick/slip friction, validated against published results
 - [x] Forgiveness map (CLI figures and interactive web panel) with two-head comparison
+- [x] Parametric head geometry: design a head from dimensions and a mass budget, derive its tensor, see which part owns the MOI
 - [ ] Impact model v2: bulge and roll, face flexibility
+- [ ] CAD import: read an STL export through the integrator's solid mode (built, untested on real geometry)
+- [ ] A measured head, to put a number on the ellipsoid idealisation
 - [ ] Materials database

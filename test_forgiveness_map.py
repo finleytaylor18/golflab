@@ -246,7 +246,7 @@ def test_the_face_outline_is_labelled_as_assumed_until_it_is_measured(ball, coar
     assert "ASSUMED" in fmap.face_description
 
     measured = fixture_symmetric_head()
-    measured.face = FaceGeometry(0.050, 0.030, outline_is_measured=True)
+    measured.face = FaceGeometry(0.050, 0.030, outline_source="measured")
     described = compute_forgiveness_map(measured, ball, DRIVER, coarse).face_description
     assert "measured" in described and "ASSUMED" not in described
 

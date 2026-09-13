@@ -254,7 +254,7 @@ dimensions, all ✅ from the Equipment Rules Part 2 §4b(i) (page numbers are th
 |---|---|---|---|
 | Heel–toe length | `2a` | ≤ 127 mm | 51 |
 | Sole–crown height | `2b` | ≤ 71.12 mm | 51 |
-| Proportion | `a > c` | heel–toe must exceed face–back | 51 |
+| Proportion | `2a > z_f + c` | heel–toe must exceed face–back | 51 |
 | Volume | `(4/3)π a b c − V_cap` | ≤ 460 + 10 cm³ | 52 |
 | MOI | existing report | ≤ 5900 + 100 g·cm² | 54 |
 
@@ -265,10 +265,22 @@ The cap volume in front of the face plane, for the plane at `z_f` (ellipsoid coo
 > Derived by integrating the cross-section area `π a b (1 − z²/c²)` from `z_f` to `c`.
 > Verified during this proposal against Monte Carlo to 0.02 %, and exact at both endpoints
 > (`z_f = −c` gives the whole ellipsoid, `z_f = c` gives zero). For the brief's proportions
-> the cap is 12.8 % of the volume — against 29 % of the surface area, which is why the
-> truncation matters more for the tensor than for the volume.
+> the cap is 12.8 % of the volume — against 20.7 % of the surface area (corrected in Phase 3
+> from a mis-weighted 29 %; see the brief §3), which is why the truncation matters more for
+> the tensor than for the volume.
 
 All five are **reported, never enforced** — the same decision as Step 1's MOI report.
+
+> 🔧 **Corrected in Phase 3.** The proportion row originally read `a > c`. The Rules compare
+> heel-to-toe with *face-to-back*, and for a truncated head face-to-back is the face plane to
+> the back pole, `z_f + c` — not the ellipsoid's full depth `2c`. The code uses `z_f + c` and
+> a test pins it.
+
+**As derived for `design_v1` (Phase 3, default mesh):** 200 g; CG 37.2 mm deep, 3.0 mm below
+centre and 2.7 mm toward the heel (the hosel); `I = diag(2134, 3868, 3113) g·cm²` with
+products of order 100; Rules-frame MOI **3543 g·cm²**; 385.9 cc; conforming on all five; no
+warnings. Placeholder numbers from a placeholder design — but the right order of magnitude
+without any tuning, which is the point of §7 in the brief.
 
 ---
 
@@ -329,11 +341,11 @@ same as `fixture_symmetric_head`'s was: something real enough that the tool open
 | | clipped mesh has no vertex beyond `z_f`; split regions have no crossing triangle | exactness claims of §3.3 |
 | `test_head_geometry.py` | assembling about two reference points → identical result | parallel-axis bookkeeping |
 | | symmetric design → CG on the centreline, zero products, sweet spot at the face centre | no hidden asymmetry |
-| | truncated vs untruncated shell differ by the cap share (≈ 29 % for §7 proportions) | clipping does what the brief says |
+| | truncated vs untruncated shell differ by the cap share (≈ 21 % of area for §7 proportions) | clipping does what the brief says |
 | | rear weight → deeper CG and larger `Iₓₓ`, `I_yy`; heel/toe pair → `I_yy` rises more than `Iₓₓ`; lighter crown → lower CG | the design levers move the right way |
 | | breakdown shares sum to the totals; CG pulls sum to zero | the breakdown is a partition, not a story |
 | | output passes `HeadMassProperties` validation | the derived tensor is physically possible |
-| | `design_v1` reproduces the brief's closed-form pre-check within the cap correction | the two methods agree where they should |
+| | a uniform 200 g shell lands within ±30 % of the brief's closed-form pre-check (3630 g·cm²) | the two methods agree to the order they should — the pre-check was an untruncated, non-uniform-thickness shell, so a band, not a number |
 | | cap volume vs the closed form; conformance trio against the cited limits | §5 |
 | | boundary validation rejects each rule in §2.3 | bad designs fail at the edge |
 | `test_head_design_repository.py` | round trip, industry units on disk, old-key compatibility, `tmp_path` isolation | persistence |

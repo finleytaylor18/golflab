@@ -284,7 +284,7 @@ def get_head_mass_properties() -> HeadMassProperties:
         face_half_width_mm=half_width, face_half_height_mm=half_height)
 
     measured = input("Is that face outline measured from real geometry? (y/n): ")
-    head.face.outline_is_measured = measured.lower() == "y"
+    head.face.outline_source = "measured" if measured.lower() == "y" else "assumed"
 
     report = head.conformance_report()
     print()

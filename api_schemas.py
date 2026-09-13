@@ -120,7 +120,8 @@ class HeadMassPropertiesRequest(BaseModel):
     face_half_width_mm: float = 50.0
     face_half_height_mm: float = 30.0
     face_shape: str = "ellipse"
-    face_outline_is_measured: bool = False
+    face_outline_source: str = "assumed"        # "assumed" | "design" | "measured"
+    face_outline_is_measured: bool | None = None   # legacy clients; True means "measured"
 
 
 def to_head_mass_properties(request: HeadMassPropertiesRequest) -> HeadMassProperties:
@@ -138,8 +139,10 @@ def to_head_mass_properties(request: HeadMassPropertiesRequest) -> HeadMassPrope
         face_half_height_mm=request.face_half_height_mm,
     )
     head.face.shape = request.face_shape
-    head.face.outline_is_measured = request.face_outline_is_measured
-    # Re-run the outline's own validation, which the assignment above bypassed.
+    head.face.outline_source = request.face_outline_source
+    if request.face_outline_is_measured is True:
+        head.face.outline_source = "measured"
+    # Re-run the outline's own validation, which the assignments above bypassed.
     head.face.__post_init__()
     return head
 
@@ -221,7 +224,7 @@ def head_to_request_payload(head: HeadMassProperties) -> dict:
         "face_half_width_mm": m_to_mm(head.face.half_width_m),
         "face_half_height_mm": m_to_mm(head.face.half_height_m),
         "face_shape": head.face.shape,
-        "face_outline_is_measured": head.face.outline_is_measured,
+        "face_outline_source": head.face.outline_source,
     }
 
 

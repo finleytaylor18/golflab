@@ -203,7 +203,7 @@ export interface HeadMassProperties {
   face_half_width_mm: number;
   face_half_height_mm: number;
   face_shape: "ellipse" | "rectangle";
-  face_outline_is_measured: boolean;
+  face_outline_source: "assumed" | "design" | "measured";
 }
 
 export interface ImpactConditions {
@@ -316,7 +316,7 @@ export const DEFAULT_HEAD: HeadMassProperties = {
   face_half_width_mm: 50,
   face_half_height_mm: 30,
   face_shape: "ellipse",
-  face_outline_is_measured: false,
+  face_outline_source: "assumed",
 };
 
 export const DEFAULT_MAP_SETTINGS: MapSettings = {

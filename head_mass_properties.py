@@ -65,15 +65,18 @@ class FaceGeometry:
     summary metric is "how much face area keeps at least X% of ball speed",
     a rectangular outline would inflate that number by a quarter.
 
-    `outline_is_measured` stays False until the outline comes from real
-    geometry. Everything that draws a face must say so when it is False --
-    an assumed outline produces an assumed area.
+    `outline_source` says where the outline came from -- "assumed" (a
+    guess), "design" (derived from a parametric design), or "measured" (from
+    real geometry). Everything that draws a face must say which -- an assumed
+    outline produces an assumed area.
     """
 
     half_width_m: float    # x half-extent, heel <-> toe
     half_height_m: float   # y half-extent, sole <-> crown
-    outline_is_measured: bool = False
+    outline_source: str = "assumed"
     shape: str = "ellipse"
+
+    OUTLINE_SOURCES = ("assumed", "design", "measured")
 
     def __post_init__(self):
         for name, value in (("half_width_m", self.half_width_m),
@@ -82,6 +85,15 @@ class FaceGeometry:
                 raise ValueError(f"{name} must be a positive, finite length (got {value})")
         if self.shape not in {"ellipse", "rectangle"}:
             raise ValueError(f"shape must be 'ellipse' or 'rectangle' (got {self.shape!r})")
+        if self.outline_source not in self.OUTLINE_SOURCES:
+            raise ValueError(
+                f"outline_source must be one of {self.OUTLINE_SOURCES} (got {self.outline_source!r})"
+            )
+
+    @property
+    def outline_is_measured(self) -> bool:
+        """Kept for callers that only care whether the outline is real."""
+        return self.outline_source == "measured"
 
     def contains(self, x_m: float, y_m: float) -> bool:
         if self.shape == "rectangle":
@@ -97,7 +109,8 @@ class FaceGeometry:
 
     def describe(self) -> str:
         """One line naming the outline and whether it can be trusted."""
-        source = "measured" if self.outline_is_measured else "ASSUMED (not measured)"
+        source = {"measured": "measured", "design": "from design",
+                  "assumed": "ASSUMED (not measured)"}[self.outline_source]
         return (f"{self.shape} outline, {m_to_mm(2 * self.half_width_m):.0f} x "
                 f"{m_to_mm(2 * self.half_height_m):.0f} mm, {source}")
 

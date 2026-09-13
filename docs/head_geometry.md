@@ -95,9 +95,15 @@ already uses. The 27 % box-vs-ellipse area difference from Step 1 is the same ar
 **Why the truncation is not optional.** The face is not a tangent point; it is a plane cutting
 the ellipsoid where it is still wide. For driver-like proportions (120 × 64 × 110 mm, face
 100 mm wide) the plane sits 30 mm in front of the centre, and the shell surface in front of it
-— the part the face plate replaces — is **29 % of the total** (numerical pre-check, §7).
-Modelling "complete ellipsoid plus a plate" would double-count nearly a third of the body. So
-the shell must be clipped, and once clipped it has no closed-form tensor. That decides §4.
+— the part the face plate replaces — is **21 % of the total** (20.7 % by exact quadrature;
+🧪 tested). Modelling "complete ellipsoid plus a plate" would double-count a fifth of the
+body. So the shell must be clipped, and once clipped it has no closed-form tensor. That
+decides §4.
+
+> 🔧 **Corrected in Phase 3.** This brief originally said 29 %. The Monte Carlo pre-check it
+> came from sampled θ with density ∝ sin θ and then divided by sin θ again, so it weighted the
+> region near the front pole — the cap — too heavily. The integrator and an independent
+> Gauss–Legendre quadrature agree on 20.7 %. The conclusion is unchanged; the number was not.
 
 **Why masses, not thicknesses.** The designer states a mass budget per part (shell 140 g,
 face 30 g, hosel 12 g, weights 2 × 9 g …) rather than thickness × density. Two reasons:
@@ -123,12 +129,19 @@ per unit area, and the tessellation error falls as the mesh is refined. 🧪 Con
 testable, and so is exactness, because two limits **do** have closed forms:
 
 > 📐 **Thin spherical shell**, radius `R`: `I = (2/3) m R²` about any axis.
-> 📐 **Solid ellipsoid**, semi-axes `a, b, c`: `Iₓₓ = m (b² + c²)/5`, and cyclically — from which
-> a **thin untruncated ellipsoidal shell** is the difference of two concentric solid ellipsoids,
-> outer minus inner, in the limit of small thickness.
+> 📐 **Solid ellipsoid**, semi-axes `a, b, c`: `Iₓₓ = m (b² + c²)/5`, and cyclically.
 
-The integrator must reproduce both to well under 0.1 % on a moderate mesh before it is trusted
-on a truncated shell it cannot be checked against.
+> 🔧 **Corrected in Phase 3.** An earlier draft added that a thin ellipsoidal shell is
+> "outer minus inner" concentric solid ellipsoids in the thin limit. It is not: that limit is
+> a shell whose *thickness varies* around the surface, not one of uniform mass per unit area,
+> and a uniform ellipsoidal shell has no elementary closed form at all (its area involves
+> elliptic integrals). The oracle for the ellipsoid — clipped or not — is therefore an
+> **independent Gauss–Legendre quadrature** of the exact surface, accurate to ~1e-10, against
+> which the tessellation agrees to 1e-4. The sphere and the solid ellipsoid remain the exact
+> closed-form checks.
+
+The integrator must reproduce the closed forms to well under 0.1 % and the quadrature to
+1e-3 on a moderate mesh before it is trusted on anything it cannot be checked against.
 
 **The same integrator, run in "solid" mode, is a CAD importer.** For a closed triangle mesh
 bounding a *volume* (an STL export from Fusion), the divergence theorem turns the volume
@@ -289,7 +302,7 @@ Each is a test in Phase 3, with the physical claim it proves.
 | Refining the mesh converges monotonically | the number is a property of the shape, not of the tessellation |
 | Assemble the same head about two different reference points → identical tensor | the parallel-axis bookkeeping is right |
 | Symmetric design → CG on the centreline, zero products of inertia, sweet spot exactly at the face centre | no hidden asymmetry; connects to Step 1's symmetry test |
-| Truncated vs untruncated shell differ by the cap's share (≈ 29 % for the §7 proportions) | the clipping is doing what §3 says it must |
+| Truncated vs untruncated shell differ by the cap's share (≈ 21 % of area for the §7 proportions) | the clipping is doing what §3 says it must |
 | Rear weight → deeper CG, larger `Iₓₓ` and `I_yy`; heel/toe weights → `I_yy` rises more than `Iₓₓ`; lighter crown → lower CG | the design levers move the right way |
 | Output passes `HeadMassProperties` validation | the derived tensor is physically possible, every time |
 | Volume, dimensions and MOI conformance reported against the cited limits | the design box is visible |

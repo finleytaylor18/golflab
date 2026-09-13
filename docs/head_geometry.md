@@ -1,349 +1,206 @@
-# Parametric Head Geometry v1 — Concept Brief
+# Parametric Head Geometry v1 — Model Report
 
-**Status:** Step 2, Phase 1 (concept only). **No code has been written against this.**
-**Scope:** a handful of design parameters → mass, centre of gravity and full inertia tensor of a
-clubhead → `HeadMassProperties` → the impact model and forgiveness map, with no CAD required.
-**Companions:** [`impact_model.md`](impact_model.md) (what consumes the output),
-[`impact_architecture.md`](impact_architecture.md) §1 (the frame the output must be in).
-**Out of scope for v1:** importing real CAD geometry (though §4 builds the tool that will do it),
-non-uniform shell thickness beyond a crown/sole split, hosel geometry, internal ribs and
-badges, face curvature (the impact model is flat-faced anyway), material databases.
+**Status:** Step 2, Phase 5 — implemented, tested, validated as far as the sources allow.
+**Scope:** seven design numbers, a hosel and a list of weights → mass, centre of gravity and full
+inertia tensor → `HeadMassProperties` → the impact model and forgiveness map. No CAD required.
+**Companions:** [`head_geometry_architecture.md`](head_geometry_architecture.md) (how it is built),
+[`impact_model.md`](impact_model.md) (what consumes the output). Tests:
+`test_mesh_mass_properties.py`, `test_head_geometry.py`, `test_head_geometry_validation.py`.
+**Out of scope for v1:** importing real CAD geometry (though the integrator's solid mode is
+built for it), non-uniform shell thickness beyond the crown/sole split, hosel geometry,
+internal structure, face curvature, material databases.
 
 Source labels as in `impact_model.md` §0: ✅ Verified · 📐 Derived · ⚠️ Estimate · 🧪 Tested.
 
 ---
 
-## 1. The problem this solves
+## 1. Why it exists
 
-Step 1 built the engine of the design-to-outcome chain: mass properties in, launch conditions
-and a forgiveness map out. Its input side is empty. There is no CAD model, `clubs.json` is
-empty, and every figure so far is of `fixture_symmetric_head`, a synthetic head with invented
-round numbers.
+Step 1 built the engine of the design-to-outcome chain and left its input side empty: no CAD
+model exists, and every figure was of a synthetic fixture with invented round numbers. The
+engine needs a head's mass, CG and 3×3 inertia tensor, and a tensor is an integral over an
+actual shape — it cannot be looked up, and under standing rule 4 it cannot be invented.
 
-The engine needs three things about a head — mass, CG position, and the 3×3 inertia tensor
-about the CG — and a tensor is an integral of mass × distance² over an actual shape. It cannot
-be looked up, and under standing rule 4 it cannot be invented.
-
-This step makes the shape a **design input**: a designer specifies an idealised head with a
-few dimensions and a mass budget, and the tensor is *derived* from that. Nothing is invented;
-what is estimated is the idealisation, and it is labelled as such. Later, real CAD geometry can
-replace the idealised shape without changing anything downstream — and §4 builds the one piece
-of machinery both need.
-
-**Standing-rule framing.** A head defined by dimensions *you* choose is your design, named
-`design_*`, and never presented as a product. Its mass properties are 📐 derived from stated
-inputs; the shape itself is ⚠️ an estimate of a real driver's, and §8 says how good.
+This step makes the shape a **design input**. A head defined by dimensions *you* choose is
+your design, named `design_*`, never presented as a product; its mass properties are
+📐 derived from the stated inputs; the idealised shape is ⚠️ an estimate of a real driver's,
+and §4 puts a number on how much that estimate can matter.
 
 ---
 
-## 2. The one idea: superposition
+## 2. The model
 
-**The intuition.** A clubhead is an assembly — a thin body shell, a thicker face, a hosel, a
-couple of tungsten weights. Mass properties of an assembly are just the sum of the parts',
-provided every part's tensor is expressed about the *same* point. Each part is simple enough
-to handle on its own; the assembly is bookkeeping.
+### 2.1 One idea: superposition
 
-**The notation.** For parts with mass `mᵢ`, CG position `rᵢ`, and tensor `Iᵢ` about their own
-CG:
+An assembly's mass properties are the sum of its parts', once every part's tensor is shifted
+to a common point. For parts with mass `mᵢ`, CG `rᵢ` and tensor `Iᵢ` about their own CG:
 
 ```
-M   = Σ mᵢ
-r_cg = (Σ mᵢ rᵢ) / M                                         first moments add
-I_cg = Σ [ Iᵢ + mᵢ ( |dᵢ|² 𝟙 − dᵢ dᵢᵀ ) ],   dᵢ = rᵢ − r_cg      parallel-axis theorem
+M    = Σ mᵢ
+r_cg = (Σ mᵢ rᵢ) / M
+I_cg = Σ [ Iᵢ + mᵢ ( |dᵢ|² 𝟙 − dᵢ dᵢᵀ ) ],   dᵢ = rᵢ − r_cg        (parallel-axis theorem)
 ```
 
-> 📐 The parallel-axis term is the same `M·d²` that the Fusion checklist warned about
-> ("at centre of mass", not "at origin") — here it is used deliberately, once per part, and
-> it is what a test will check by assembling the same head about two different reference
-> points and demanding the same answer.
+🧪 Translating every part by the same offset leaves `I_cg` unchanged to 1e-12. The per-part
+terms are reported as a **breakdown**; they are a true partition (shares sum to one, CG pulls
+sum to zero), 🧪 tested.
 
-That is the whole method. Everything else is deciding what the parts are and how to get each
-one's own tensor.
+### 2.2 The parts
 
----
-
-## 3. The idealised head
-
-```
-   PLAN — looking down (crown toward you)                 FACE-ON — from the target
-
-                    back                                        crown
-            ╭───────────────╮                              ╭───────────╮
-          ╱   ●W          W●  ╲   ← rear weights         ╱  ╭───────╮  ╲
-         │         ◆ CG        │                        │   │ face  │   │  ← face plate:
-   heel  │  H                  │  toe            heel   │   │ plate │   │    ellipse of
-          ╲                   ╱                          ╲  ╰───────╯  ╱     intersection
-     ╌╌╌╌╌╌╲╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╱╌╌╌╌╌  face plane z = z_f     ╰───────────╯
-          ⊕ face centre = head-frame origin                     sole
-                    ↓ +z (outward normal)
-
-   ●W weight (point mass)   H hosel (point mass)   ◆ assembled CG   ⊕ origin
-```
-
-| Part | Idealised as | Tensor from | Designer specifies |
+| Part | Idealised as | Tensor from | Designer states |
 |---|---|---|---|
-| **Body shell** | thin ellipsoidal shell, semi-axes `a` (heel–toe), `b` (sole–crown), `c` (face–back), **truncated** at the face plane | numerical surface integration (§4) | `a, b, c`, shell mass (or crown + sole masses), face-plane position |
-| **Face plate** | thin flat elliptical plate filling the truncation opening | closed form (§4) | face mass (thickness optional) |
-| **Hosel** | point mass | parallel axis only | mass, position |
-| **Weights** | point masses (0 … n of them) | parallel axis only | mass, position each |
+| Body shell | thin ellipsoidal shell, semi-axes `a` (heel–toe), `b` (sole–crown), `c` (face–back), **truncated** at the face plane, split into crown and sole halves | numerical surface integration (§2.3) | `a, b, c`, crown mass, sole mass, face width |
+| Face plate | thin flat ellipse filling the truncation opening | 📐 `m/4 · (b_f², a_f², a_f² + b_f²)` | face mass |
+| Hosel, weights | point masses | parallel axis only | mass and position, in the designer's words (toe / crown / back) |
 
-**Why an ellipsoid.** A driver is not one, but it is far closer to one than to a box, its
-principal directions line up with the head frame by construction, its volume is closed-form,
-and its face-plane intersection is an ellipse — which is exactly the outline `FaceGeometry`
-already uses. The 27 % box-vs-ellipse area difference from Step 1 is the same argument again.
+**Masses, not thicknesses.** The total is checkable against the ~200 g a driver head weighs,
+and no material density has to be sourced. **Everything in one frame** — the head frame of
+`impact_architecture.md` §1.1 — with the ellipsoid centre a *derived* point `(0, 0, −z_f)`.
 
-**Why the truncation is not optional.** The face is not a tangent point; it is a plane cutting
-the ellipsoid where it is still wide. For driver-like proportions (120 × 64 × 110 mm, face
-100 mm wide) the plane sits 30 mm in front of the centre, and the shell surface in front of it
-— the part the face plate replaces — is **21 % of the total** (20.7 % by exact quadrature;
-🧪 tested). Modelling "complete ellipsoid plus a plate" would double-count a fifth of the
-body. So the shell must be clipped, and once clipped it has no closed-form tensor. That
-decides §4.
+**Derived, never typed:** `z_f = c √(1 − (w/2a)²)`; face outline semi-axes
+`a_f = w/2`, `b_f = b √(1 − (z_f/c)²)`; face-to-back `z_f + c`; truncated volume
+`(4/3)π a b c − π a b (2c/3 − z_f + z_f³/3c²)` — 📐 the cap term verified against Monte Carlo
+to 0.02 % and exact at both endpoints.
 
-> 🔧 **Corrected in Phase 3.** This brief originally said 29 %. The Monte Carlo pre-check it
-> came from sampled θ with density ∝ sin θ and then divided by sin θ again, so it weighted the
-> region near the front pole — the cap — too heavily. The integrator and an independent
-> Gauss–Legendre quadrature agree on 20.7 %. The conclusion is unchanged; the number was not.
+### 2.3 The shell — a mesh integrator with two modes
 
-**Why masses, not thicknesses.** The designer states a mass budget per part (shell 140 g,
-face 30 g, hosel 12 g, weights 2 × 9 g …) rather than thickness × density. Two reasons:
-the total is then a directly checkable number against the ~200 g a driver head weighs; and it
-needs **no material density constants**, which standing rule 3 would otherwise require to be
-sourced. A thickness can be *reported* if the designer optionally supplies a density with a
-citation, but it is never needed.
+The ellipsoid is parametrised `x = a sinθ cosφ, y = b sinθ sinφ, z = c cosθ` and tessellated.
+Two things are **exact by construction**: the face plane `z = z_f` is the grid line
+`θ = arccos(z_f/c)`, so clipping introduces no error; and with an even `n_φ`, `y = 0` is a grid
+line, so every triangle lies wholly in the crown or the sole. Each triangle is a flat lamina
+with the exact second moment
 
----
+> 📐 `S = (m/12) [ p₁p₁ᵀ + p₂p₂ᵀ + p₃p₃ᵀ + (p₁+p₂+p₃)(p₁+p₂+p₃)ᵀ ]`,  `I = tr(S)·𝟙 − S`
 
-## 4. Computing each part
+so the only approximation is the tessellation of a smooth surface, and 🧪 that converges at
+second order. **Solid mode** (signed tetrahedra, divergence theorem) is built alongside with
+its oracle tests and watertightness guard: it is the future STL importer, and the parametric
+shell is its test fixture. One integrator, two callers.
 
-### 4.1 The shell — a mesh mass-property integrator
+**Why the truncation is mandatory.** For driver proportions with a 100 mm face, the shell
+surface in front of the face plane is **20.7 %** of the whole (🧪 by exact quadrature). A
+"complete ellipsoid plus a plate" would double-count a fifth of the body.
 
-Parametrise the ellipsoid surface, tessellate it into triangles, discard triangles in front of
-the face plane, and treat each remaining triangle as a flat lamina of area `Aₖ` carrying mass
-`σ Aₖ`, where `σ = m_shell / A_total` is the uniform surface density. Then sum the lamina
-contributions — mass, first moment, and second moment about the origin — and shift to the
-assembly CG with the parallel-axis theorem.
-
-This is not an approximation in the sense that matters: a thin shell *is* a surface with mass
-per unit area, and the tessellation error falls as the mesh is refined. 🧪 Convergence is
-testable, and so is exactness, because two limits **do** have closed forms:
-
-> 📐 **Thin spherical shell**, radius `R`: `I = (2/3) m R²` about any axis.
-> 📐 **Solid ellipsoid**, semi-axes `a, b, c`: `Iₓₓ = m (b² + c²)/5`, and cyclically.
-
-> 🔧 **Corrected in Phase 3.** An earlier draft added that a thin ellipsoidal shell is
-> "outer minus inner" concentric solid ellipsoids in the thin limit. It is not: that limit is
-> a shell whose *thickness varies* around the surface, not one of uniform mass per unit area,
-> and a uniform ellipsoidal shell has no elementary closed form at all (its area involves
-> elliptic integrals). The oracle for the ellipsoid — clipped or not — is therefore an
-> **independent Gauss–Legendre quadrature** of the exact surface, accurate to ~1e-10, against
-> which the tessellation agrees to 1e-4. The sphere and the solid ellipsoid remain the exact
-> closed-form checks.
-
-The integrator must reproduce the closed forms to well under 0.1 % and the quadrature to
-1e-3 on a moderate mesh before it is trusted on anything it cannot be checked against.
-
-**The same integrator, run in "solid" mode, is a CAD importer.** For a closed triangle mesh
-bounding a *volume* (an STL export from Fusion), the divergence theorem turns the volume
-integrals for mass, CG and tensor into sums over the same triangles. So the tool built here is
-the tool that reads a real head later — the parametric shell and the Fusion import share one
-integrator with two modes, and the parametric head becomes the test fixture for the importer.
-That is the strongest argument for doing this step numerically rather than hunting for
-closed forms.
-
-### 4.2 The face plate — closed form
-
-A thin elliptical plate with semi-axes `a_f` (heel–toe) and `b_f` (sole–crown), mass `m_f`,
-about its centroid:
-
-> 📐 `Iₓₓ = m_f b_f²/4`, `I_yy = m_f a_f²/4`, `I_zz = m_f (a_f² + b_f²)/4`
-
-The semi-axes are **derived, not specified**: the plane `z = z_f` cuts the ellipsoid in the
-ellipse with `a_f = a √(1 − (z_f/c)²)` and `b_f = b √(1 − (z_f/c)²)`, centred on the axis. So
-the designer can equivalently state the face *width* and the model solves for `z_f`. The face
-plate's centroid is the head-frame origin, which is what makes the frame fall out cleanly
-(§5).
-
-### 4.3 Hosel and weights — point masses
-
-No own tensor; parallel axis only. A hosel as a point mass is crude (§9), but its mass is
-small and its position is what matters — it sits high on the heel and pulls the CG that way,
-which is a real and visible effect on the sweet-spot position.
-
-### 4.4 Crown/sole split (recommended for v1, as an option)
-
-Real design leans hard on a light carbon crown and a heavy sole. The shell integrator handles
-this for free: split the surface at `y = 0` and give the two halves different surface
-densities from two stated masses. Nothing else changes. This is worth having from the start
-because "lighten the crown" is the single most common modern design move, and its effect on
-CG height and the vertical gear effect is exactly the kind of thing the map should show.
+> 🔧 Two corrections made during implementation, recorded rather than edited away: the concept
+> brief first said 29 % (a Monte Carlo pre-check applied `sin θ` twice), and claimed a uniform
+> ellipsoidal shell is the thin limit of outer-minus-inner solid ellipsoids (that limit has
+> non-uniform thickness). The oracle for the ellipsoid is therefore an independent
+> Gauss–Legendre quadrature, not a closed form.
 
 ---
 
-## 5. The frame, and what the output looks like
+## 3. Sources and constants
 
-The ellipsoid is naturally described about its own centre, but the impact model wants the
-**head frame**: origin at the geometric face centre, `x` toward the heel, `y` toward the
-crown, `z` along the outward normal (`impact_architecture.md` §1.1, as corrected).
+The model needs **no physical constants**: masses are inputs, and the shape is geometry. The
+Equipment Rules supply the design box, all ✅ from Part 2 §4b(i) (page numbers are the PDF's):
 
-Because the face plane is perpendicular to `z` and its intersection ellipse is centred on the
-axis, the head-frame origin is simply `(0, 0, z_f)` in ellipsoid coordinates and the axes are
-already parallel. The transform is a translation by `z_f` and nothing else — no rotation, no
-handedness question. The CG lands at negative `z` automatically, which `HeadMassProperties`
-requires.
-
-**Output:** a validated `HeadMassProperties` — so the triangle inequality, positive-definiteness
-and CG-behind-face checks all apply to the *derived* tensor, which is a useful sanity net on
-the integrator — plus:
-
-- a **breakdown**: each part's share of `Iₓₓ`, `I_yy`, of the CG position, of the mass. This is
-  the design insight the numbers alone hide ("the two 9 g weights are 31 % of `I_yy`").
-- the **conformance trio** against the Equipment Rules (§6): volume, dimensions, MOI.
-- the face outline as a `FaceGeometry` with its source marked. `outline_is_measured` is a
-  boolean and this outline is neither *assumed* nor *measured* — it is *designed*. Phase 2
-  should replace the flag with `outline_source: assumed | design | measured` so a map can say
-  which.
-
----
-
-## 6. Design bounds from the Equipment Rules
-
-A parametric designer should know the box it is designing inside. ✅ All from Part 2 §4b(i),
-which applies to woodheads; page numbers are the PDF's.
-
-| Constraint | Limit | Where |
+| Constraint | Limit | Page |
 |---|---|---|
-| Heel-to-toe length | ≤ 5 in (127 mm), measured at 60° lie | p.51 |
-| Sole-to-crown height | ≤ 2.8 in (71.12 mm), including permitted features | p.51 |
-| Proportion | heel-to-toe must exceed face-to-back | p.51 |
-| Volume | ≤ 460 cm³ (28.06 in³), + 10 cm³ tolerance | p.52 |
-| MOI about the vertical axis at 60° lie, about the CG | ≤ 5900 g·cm², + 100 tolerance | p.54; MOI protocol p.3 |
+| Heel-to-toe length, at 60° lie | ≤ 5 in (127 mm) | 51 |
+| Sole-to-crown height | ≤ 2.8 in (71.12 mm) | 51 |
+| Proportion | heel-to-toe > face-to-back (`2a > z_f + c`) | 51 |
+| Volume | ≤ 460 cm³ + 10 cm³ tolerance | 52 |
+| MOI about the vertical at 60° lie, about the CG | ≤ 5900 + 100 g·cm² | 54; MOI protocol p.3 |
 
-The model reports all five as a **report, not a rejection** — GolfLab is a design tool and
-"how much would a non-conforming head gain?" is a legitimate question, exactly as Step 1
-decided for MOI. The ellipsoid's bounding box is `2a × 2b × 2c` (so the proportion rule reads
-`a > c`), and its volume is `(4/3) π a b c` minus the truncated cap, for which a closed form
-exists and which the integrator also gives numerically — a small extra cross-check for free.
+All five are **reported, never enforced** — a non-conforming design is a legitimate thing to
+want to model. The volume the Rules measure is by water displacement (p.53); ours is the
+geometric volume of the idealised shape, which is the same quantity for a closed shell.
 
 ---
 
-## 7. Pre-check: does the idealisation land in the right place?
+## 4. Assumptions and validity range
 
-Computed while writing this brief, with the closed-form untruncated shell (so *indicative*,
-not the v1 method):
+**Assumptions (v1).** 1. Thin ellipsoidal body shell, truncated flat at the face. 2. Uniform
+mass per unit area within each of the crown and sole halves. 3. Flat elliptical face plate.
+4. Hosel and weights are point masses. 5. No internal structure; the mass budget absorbs it.
+6. Everything is rigid and the frame is the head frame.
 
-| Design | `Iₓₓ` | `I_yy` | `I_zz` | Rules-frame MOI | Volume |
-|---|---|---|---|---|---|
-| 120 × 64 × 110 mm shell, all 200 g in the shell, no weights | 2614 | 3968 | 2902 | **3629** | 442 cc |
-| same, 160 g shell + 2 × 20 g weights at the rear heel/toe corners | 2941 | 4624 | 3001 | **4203** | 442 cc |
+**How large is the shape assumption?** Nobody has measured a real head against this model
+yet, so the honest way to bound the error is to bracket it: the same shell mass in the same
+outer box as a **thin rectangular box** (closed form, six plates) is the opposite extreme — all
+mass at the extremities — and a real driver lies between the two.
 
-All in g·cm². Two things to take from it:
+| | Ellipsoidal shell (ours) | Box shell | Ratio |
+|---|---|---|---|
+| Shell alone (130 g, 120 × 64 × 85 mm) `Iₓₓ, I_yy, I_zz` | 1308, 2314, 2114 | 2141, 3598, 3121 | **1.64, 1.55, 1.48** |
+| Assembled head (200 g, all parts) | 2134, 3868, 3113 | 2967, 5152, 4121 | **1.39, 1.33, 1.32** |
+| Rules-frame MOI, assembled | 3543 | ~4606 | 1.30 |
 
-1. **The order of magnitude is right without tuning.** A plain shell at driver dimensions
-   lands in the low thousands, under the 5900 ceiling — where a mid-forgiveness driver sits.
-   Moving 40 g to the rear corners adds ~16 % to `I_yy` and pulls the CG 9 mm back, which is
-   the size of effect real weight ports produce. If the idealisation were badly wrong, these
-   numbers would be off by a factor, not a fraction.
-2. **`I_yy > Iₓₓ`, as it should be** for a head wider than it is tall. The map's toe–heel
-   fall-off will be gentler than its high–low fall-off, matching the Step 1 fixture's shape and
-   the geometry of every real driver.
+All g·cm², 🧪 tested. So: **the shape assumption is worth up to ~30 % on the assembled
+tensor**, and less on ratios and trends. That is the validity statement.
 
-Neither table row is a design recommendation, and neither is a real product.
-
----
-
-## 8. What is derived, what is estimated, and how good it is
-
-**📐 Derived from stated inputs:** the tensor, CG, volume, face outline, breakdown. Given the
-idealised shape, these are exact to mesh convergence, and the tests in §10 pin that.
-
-**⚠️ Estimated — the shape.** A real driver is fuller behind the face, flatter on the sole,
-and not symmetric about the heel–toe plane; its shell thickness varies; its hosel is a tube.
-The ellipsoid gets the mass in roughly the right places, which is what the tensor is
-sensitive to, but *how* good it is cannot be stated from this brief. Honest expectation:
-**trends right, ratios close, absolute values within a band that only validation can
-narrow.** Three cross-checks are available and Step 2 Phase 5 should use all it can:
-
-- the Rules' MOI ceiling and the volume limit — a band, not a value, but a hard one;
-- a **published MOI figure for a real driver**, cited, used purely as a comparison against a
-  design set to that head's outer dimensions and mass — never as an input;
-- a **measured head** via the bifilar-pendulum route, if one is available. This is the check
-  that would actually put a number on the idealisation error.
-
-**What the estimate does *not* affect:** the impact model's physics, which is unchanged; and
-relative comparisons between two designs, where the idealisation error largely cancels — the
-same argument as Step 1's validity table. A designer asking "does moving this weight help?"
-gets a trustworthy answer sooner than one asking "what is my exact MOI?"
-
----
-
-## 9. Limitations (v1)
-
-1. **Ellipsoidal shell.** The shape is the estimate. See §8.
-2. **Uniform thickness** within each shell region (whole, or crown/sole halves).
-3. **Flat face plate**, which is also what the impact model assumes. Face curvature is a Step 3
-   problem on both sides.
-4. **Point-mass hosel.** Its inertia about its own axis is ignored; its position is kept.
-5. **No internal structure** — ribs, sound plates, adhesive, paint. The mass budget absorbs
-   them if the designer wants; the model does not place them.
-6. **No density constants** unless the designer supplies one with a citation. This is a
-   feature under rule 3, but it means "make the crown 0.6 mm carbon" cannot be expressed
-   directly — it is expressed as a crown mass.
-
----
-
-## 10. Validation plan
-
-Each is a test in Phase 3, with the physical claim it proves.
-
-| Test | Proves |
+| Trust it for | Do not trust it for |
 |---|---|
-| Integrator vs `(2/3) m R²` on a sphere, and vs `m (b²+c²)/5` on a solid ellipsoid | the lamina/divergence machinery is right, to < 0.1 % |
-| Refining the mesh converges monotonically | the number is a property of the shape, not of the tessellation |
-| Assemble the same head about two different reference points → identical tensor | the parallel-axis bookkeeping is right |
-| Symmetric design → CG on the centreline, zero products of inertia, sweet spot exactly at the face centre | no hidden asymmetry; connects to Step 1's symmetry test |
-| Truncated vs untruncated shell differ by the cap's share (≈ 21 % of area for the §7 proportions) | the clipping is doing what §3 says it must |
-| Rear weight → deeper CG, larger `Iₓₓ` and `I_yy`; heel/toe weights → `I_yy` rises more than `Iₓₓ`; lighter crown → lower CG | the design levers move the right way |
-| Output passes `HeadMassProperties` validation | the derived tensor is physically possible, every time |
-| Volume, dimensions and MOI conformance reported against the cited limits | the design box is visible |
-| The §7 numbers are reproduced by the numerical method to within the cap correction | the closed-form pre-check and the integrator agree where they should |
+| **Comparisons between designs** — move a weight, lighten the crown, widen the head: the idealisation error largely cancels | **absolute MOI to better than ~±30 %** until a measured or CAD head narrows the bracket |
+| **Trends and their direction** (§5 F) — every lever moves the right way, 🧪 | the exact conformance margin of a real product — this is a design tool, not a conformance lab |
+| **Order of magnitude** — a plain shell lands in the low thousands of g·cm² with no tuning | heads far from ellipsoidal (a square-back "triangular" driver sits nearer the box end) |
+| **Which part owns the MOI** — the breakdown is a true partition | the hosel's own inertia (a point mass), or anything internal |
 
 ---
 
-## 11. Where it lands (sketch — Phase 2 decides)
+## 5. Validation results
 
-Flat, one responsibility per file, matching the repo:
+Every number below is asserted in `test_head_geometry_validation.py`.
 
-| File | Responsibility |
-|---|---|
-| `mesh_mass_properties.py` | the integrator: thin-surface mode (shells) and solid mode (closed meshes). **Reused by a later STL import.** |
-| `head_geometry.py` | `HeadDesign` (the parameters) → `HeadMassProperties` + breakdown + conformance trio |
-| `head_design_repository.py` | persistence, mirroring `head_repository.py` |
-| tests for each | |
+**What could not be validated, and why.** No source read for this project states a real
+driver's absolute moment of inertia: Penner (2003) treats MOI qualitatively (p.166), the
+Equipment Rules give only the ceiling, the MOI protocol gives no example values. Per standing
+rule 3, **no published absolute MOI is cited or asserted**, and no marketing figure is
+repeated from memory. The one check that would put a number on the idealisation error — a
+measured head via the bifilar pendulum — has not been done, because no head is available.
 
-Then wire in: a CLI option ("design a head parametrically") feeding the existing forgiveness
-map; a web panel with the design parameters replacing the raw tensor form, with the tensor
-form kept for measured/CAD heads. The map is unchanged — it just finally has a real input.
+| # | Check | Result | Verdict |
+|---|---|---|---|
+| A | Placeholder `design_v1` against all five Rules limits | conforms; Rules-frame MOI **3543 g·cm²**, 386 cc | in band, untuned |
+| B | Idealisation bracket, ellipsoid vs box shell | ×1.5–1.65 on the shell, **×1.33** on the assembled `I_yy` | the error bar, stated |
+| C | Iwatsubo et al (2000) via Penner p.166: +19 % vertical MOI → sidespin ratio **0.74** on a 10 mm toe strike | +19 % `I_yy` by growing the shell at 200 g → ratio **0.915** (Step 1's fixture: 0.845) | direction right; **further from 0.74 than the fixture** |
+| D | Does the Rules' MOI ceiling bind? | growing the shell to 126 × 70 mm reaches ~4770 g·cm² — but 499 cc, **over the volume limit first** | reproduces the real squeeze |
+| E | Step 1's engine on a designed head (hosel, offset CG, non-zero products) | linear momentum conserved to 1e-9; energy falls | the two steps agree |
+| F | Sensitivity, +10 % per input | half-width → `I_yy` **+10.6 %**; height → +1 %; wider face → `I_yy` −3.6 %, `Iₓₓ` −7.7 %, CG **2.8 mm shallower** | levers ranked |
+
+**On C, honestly.** Two things make the designed-head ratio weaker than the fixture's. Scaling
+the fixture's tensor changed *only* the tensor; growing a real shell also moves the CG deeper —
+the gear-effect lever arm — and hands back part of what the extra MOI took away. **MOI alone
+does not set gear effect; CG depth rises with it.** And the +19 % head is 137 mm and ~500 cc,
+non-conforming on both counts — it is a physics comparison, not a design. The remaining gap
+to 0.74 is Step 1's flat face, exactly as `impact_model.md` §5 records.
+
+**On D.** At 200 g, a designer cannot reach high MOI inside the Rules by making the head
+bigger — volume runs out before MOI does. It has to come from **perimeter mass**, which is
+precisely the modern driver recipe, and exactly why the Rules carry both limits.
+
+**On F.** A designer who wants heel–toe forgiveness *widens the head*, not the face: a wider
+face cuts more shell off the front and lowers every moment. Height barely touches `I_yy`.
 
 ---
 
-## 12. Decisions for Finley before Phase 2
+## 6. Limitations
 
-1. **Crown/sole split in v1?** Recommended yes (§4.4) — it is nearly free and it is the design
-   lever people actually pull. Say no and v1 is a single shell mass.
-2. **Default design dimensions.** The §7 numbers are round. A first `design_v1` wants real
-   dimensions — a ruler on any driver gives length, height and depth in a minute, and those
-   are dimensions, not product data. Or choose them as design intent.
-3. **Weights.** How many, and roughly where — rear-corner ports, a sole slider, a single back
-   weight? This shapes the parameter schema more than anything else.
-4. **Mass budget or thickness?** This brief argues for masses (§3). If you would rather think
-   in thicknesses, the densities need sourcing first, and that is a small research task.
+1. **The ellipsoid** — up to ~30 % on the assembled tensor (§4). The largest.
+2. **Uniform thickness** within each shell half. A real crown thins toward the middle.
+3. **Point-mass hosel.** Its position is right; its own inertia is dropped.
+4. **Flat face plate**, consistent with Step 1's flat-face impact model — and the map now shows
+   the consequence more clearly on a designed head than on the fixture: with a lower CG and a
+   53 mm-tall face, the topspin region at the crown edge is larger. Real roll would prevent it.
+   **Bulge and roll are the next physics to add, on both sides of the chain.**
+5. **No densities** unless supplied with a citation — "0.6 mm carbon" is expressed as a crown
+   mass.
+
+**Logged for later:** a measured head (bifilar pendulum) is the only check that turns the
+§4 bracket into a number; the integrator's solid mode is ready for an STL export the moment a
+CAD head exists.
 
 ---
 
-## 13. Phases for Step 2
+## 7. References
 
-Mirroring Step 1: **1** this brief → **2** architecture (parameter schema, integrator
-interface, the `outline_source` change) → **3** implement + tests → **4** wire into CLI, map
-and web panel → **5** validate against the Rules band, a cited published MOI, and a measured
-head if one exists. Gate at each.
+| Reference | Read? | Cited |
+|---|---|---|
+| R&A/USGA **Equipment Rules** (2020 v2), Part 2 §4b(i) | ✅ | pp. 51, 52, 53, 54 |
+| R&A/USGA **MOI Protocol** | ✅ | p. 3 |
+| Penner, "The physics of golf", *Rep. Prog. Phys.* **66**, 131–171 (2003) | ✅ | p. 166 (Iwatsubo et al 2000, as Penner reports it) |
+
+Closed forms used as oracles — thin spherical shell `(2/3) m R²`, solid ellipsoid
+`m (b² + c²)/5`, thin plate `m/12 (q², p², p² + q²)`, tetrahedron and triangle second-moment
+formulas — are standard results of rigid-body mechanics, each 🧪 verified numerically in
+`test_mesh_mass_properties.py` rather than cited from a text I have not read.

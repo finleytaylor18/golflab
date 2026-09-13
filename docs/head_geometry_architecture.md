@@ -1,7 +1,9 @@
 # Parametric Head Geometry v1 — Architecture Proposal
 
-**Status:** Step 2, Phase 2 (proposal only). **No code has been written.** Every code block is
-an illustrative sketch of a proposed interface, not an implementation.
+**Status:** Step 2, Phase 2 proposal — **built in Phase 3–4 as proposed**, with the corrections
+marked 🔧 below. Code blocks are the sketches the implementation followed; the modules are
+`mesh_mass_properties.py`, `head_geometry.py`, `head_design_repository.py`, CLI option 8,
+`POST /calculations/head-design` and the web panel's *Design it* mode.
 
 Physics and the reasons behind the modelling choices live in [`head_geometry.md`](head_geometry.md).
 This document covers *how it is built*: frame, parameter schema, the integrator, assembly,

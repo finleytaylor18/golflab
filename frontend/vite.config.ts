@@ -12,6 +12,7 @@ export default defineConfig({
       '/calculations': 'http://localhost:8000',
       '/clubs': 'http://localhost:8000',
       '/heads': 'http://localhost:8000',
+      '/designs': 'http://localhost:8000',
     },
   },
 })

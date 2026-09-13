@@ -14,6 +14,8 @@ from impact_model import SwingConditions
 from forgiveness_map import MapSettings, compute_forgiveness_map, compare_maps
 from forgiveness_diagram import plot_forgiveness_map, plot_map_comparison
 from units import mph_to_mps, degrees_to_radians
+from head_geometry import HeadDesign, PointMass, default_design, design_mass_properties
+from head_design_repository import save_design, load_design, list_design_names
 
 
 def _choose_from(prompt: str, options: list) -> int:
@@ -195,7 +197,8 @@ def main():
         print("5. Design clubhead weight distribution")
         print("6. Forgiveness map for a clubhead")
         print("7. Compare two saved clubheads")
-        print("8. Quit")
+        print("8. Design a clubhead parametrically")
+        print("9. Quit")
         choice = input("Choose an option: ")
 
         if choice == "1":
@@ -213,10 +216,12 @@ def main():
         elif choice == "7":
             compare_saved_heads()
         elif choice == "8":
+            design_clubhead_parametrically()
+        elif choice == "9":
             print("Goodbye.")
             break
         else:
-            print("Invalid option, please choose 1, 2, 3, 4, 5, 6, 7, or 8.")
+            print("Invalid option, please choose 1 to 9.")
 
 def generate_diagram_for_saved_club() -> None:
     names = list_club_names()
@@ -414,6 +419,133 @@ def print_map_summary(name: str, fmap) -> None:
               f"topspin -- the flat-face assumption has broken down there.")
     print("  The v1 face is flat: real bulge and roll counteract the gear effect "
           "shown here, so curvature is overstated toward the rim.")
+
+
+# ---------------------------------------------------------------------------
+# PARAMETRIC HEAD DESIGN
+# ---------------------------------------------------------------------------
+
+def get_point_mass(label: str, default: PointMass) -> PointMass:
+    """Collect a hosel or a weight in the designer's own words."""
+    print(f"{label} (Enter keeps the default in brackets)")
+    def ask(prompt, current):
+        raw = input(f"  {prompt} [{current:g}]: ")
+        return float(raw) if raw.strip() else current
+    mass = ask("mass (g)", default.mass_g)
+    toe = ask("toward the toe (mm, negative = heel)", default.toe_mm)
+    crown = ask("toward the crown (mm, negative = sole)", default.crown_mm)
+    back = ask("back from the face (mm)", default.back_mm)
+    return PointMass(default.name, mass, toe, crown, back)
+
+
+def get_head_design() -> HeadDesign:
+    """Collect a design. Defaults come from the placeholder design_v1 so a
+    designer can change one number and see what it does."""
+    base = default_design()
+    print()
+    print("Parametric head: a thin ellipsoidal shell cut at the face plane, a face")
+    print("plate, a hosel and weights. Masses, not thicknesses -- the total is")
+    print("checked against what a driver head weighs. Enter keeps the default.")
+    print()
+    def ask(prompt, current):
+        raw = input(f"{prompt} [{current:g}]: ")
+        return float(raw) if raw.strip() else current
+
+    name = input(f"Design name [{base.name}]: ").strip() or base.name
+    a = ask("Half-width, heel to centre (mm)", base.half_width_mm)
+    b = ask("Half-height, centre to crown (mm)", base.half_height_mm)
+    c = ask("Half-depth, centre to back (mm)", base.half_depth_mm)
+    w = ask("Face width (mm)", base.face_width_mm)
+    crown = ask("Crown shell mass (g)", base.crown_mass_g)
+    sole = ask("Sole shell mass (g)", base.sole_mass_g)
+    face = ask("Face plate mass (g)", base.face_mass_g)
+    hosel = get_point_mass("Hosel", base.hosel)
+
+    weights = []
+    for default_weight in base.weights:
+        keep = input(f"Include '{default_weight.name}'? (y/n) [y]: ").strip().lower()
+        if keep in ("", "y"):
+            weights.append(get_point_mass(default_weight.name, default_weight))
+    while True:
+        extra = input("Add another weight? Enter a name, or blank to finish: ").strip()
+        if not extra:
+            break
+        weights.append(get_point_mass(extra, PointMass(extra, 10.0, 0.0, -10.0, 60.0)))
+
+    return HeadDesign(name=name, half_width_mm=a, half_height_mm=b, half_depth_mm=c,
+                      face_width_mm=w, crown_mass_g=crown, sole_mass_g=sole, face_mass_g=face,
+                      hosel=hosel, weights=weights)
+
+
+def print_design_result(result) -> None:
+    head, c = result.head, result.conformance
+    cg = head.cg_m
+    print()
+    print(f"Derived head - {result.design.name}")
+    print("-" * 40)
+    print(f"Mass {head.mass_kg * 1000:.1f} g | CG {-cg[0] * 1000:+.1f} mm toward toe, "
+          f"{cg[1] * 1000:+.1f} mm up, {head.cg_depth_m * 1000:.1f} mm deep")
+    ixx, iyy, izz = (head.inertia_about_cg[i][i] * 1e7 for i in range(3))
+    print(f"Inertia about the CG: Ixx {ixx:.0f}, Iyy {iyy:.0f}, Izz {izz:.0f} g.cm^2")
+    print(f"Sweet spot: {-head.sweet_spot_m[0] * 1000:+.1f} mm toward toe, "
+          f"{head.sweet_spot_m[1] * 1000:+.1f} mm up from the face centre")
+    print()
+    print(f"{'part':<14}{'mass g':>8}{'mass%':>7}{'Ixx%':>7}{'Iyy%':>7}")
+    for part in result.breakdown:
+        print(f"{part.name:<14}{part.mass_g:>8.1f}{100 * part.mass_share:>7.0f}"
+              f"{100 * part.ixx_share:>7.1f}{100 * part.iyy_share:>7.1f}")
+    print()
+    print(f"Rules: heel-toe {c['heel_toe_mm']:.0f} mm (limit 127), sole-crown "
+          f"{c['sole_crown_mm']:.0f} mm (limit 71.12), face-back {c['face_to_back_mm']:.0f} mm, "
+          f"volume {c['volume_cc']:.0f} cc (limit 460+10), MOI {c['rules_frame_moi_g_cm2']:.0f} "
+          f"g.cm^2 (limit 5900+100) -- {'conforming' if c['conforms'] else 'NON-CONFORMING'}")
+    print(f"  {c['citation']}")
+    for warning in result.warnings:
+        print(f"  WARNING: {warning}")
+    print("  The shell is an idealised ellipsoid: trends and ratios are trustworthy,")
+    print("  absolute values only to the extent the idealisation holds. Not a product.")
+
+
+def design_clubhead_parametrically() -> None:
+    names = list_design_names()
+    design = None
+    if names:
+        print("Saved designs:", ", ".join(names))
+        chosen = input("Design to load (blank to enter a new one): ").strip()
+        if chosen:
+            try:
+                design = load_design(chosen)
+            except (KeyError, ValueError) as error:
+                print(error)
+                return
+    if design is None:
+        try:
+            design = get_head_design()
+        except ValueError as error:
+            print(error)
+            return
+
+    try:
+        result = design_mass_properties(design)
+    except ValueError as error:
+        print(error)
+        return
+    print_design_result(result)
+
+    if input("Save this design? (y/n): ").strip().lower() == "y":
+        save_design(design.name, design)
+        print(f"Saved design '{design.name}'.")
+    if input("Export the derived head so options 6 and 7 can use it? (y/n): ").strip().lower() == "y":
+        head_name = input(f"Name for the head [{design.name}]: ").strip() or design.name
+        save_head(head_name, result.head)
+        print(f"Saved head '{head_name}'.")
+    if input("Run a forgiveness map on it now? (y/n): ").strip().lower() == "y":
+        conditions = get_swing_conditions()
+        fmap = compute_forgiveness_map(result.head, conforming_three_piece_tour_ball(),
+                                       conditions, MapSettings())
+        print_map_summary(design.name, fmap)
+        plot_forgiveness_map(fmap, output_path=f"{design.name.replace(' ', '_')}_forgiveness.png",
+                             title=f"Forgiveness map - {design.name} (parametric design)")
 
 
 if __name__ == "__main__":

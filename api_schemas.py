@@ -5,7 +5,10 @@ from pydantic import BaseModel
 from club_specification import ClubSpecification, ClubType
 from swing_profile import SwingProfile
 from clubhead_composition import WeightPort, ClubHeadComposition
+from dataclasses import asdict
+
 from head_mass_properties import HeadMassProperties
+from head_geometry import DesignResult, HeadDesign, MeshResolution, PointMass
 from impact_model import SwingConditions
 from forgiveness_map import ForgivenessMap, MapComparison, MapSettings
 from units import degrees_to_radians, mph_to_mps
@@ -288,4 +291,105 @@ def map_comparison_to_payload(comparison: MapComparison) -> dict:
         "delta_launch_angle_deg": _grid_to_json(comparison.delta_launch_angle_deg),
         "summary_a": comparison.summary_a,
         "summary_b": comparison.summary_b,
+    }
+
+
+# ---------------------------------------------------------------------------
+# PARAMETRIC HEAD DESIGN
+# ---------------------------------------------------------------------------
+#
+# The design is the designer's boundary: millimetres and grams, positions in
+# the words a designer uses (toe / crown / back). The derived head comes back
+# in exactly the shape /heads/{name} returns, so a client can feed it straight
+# into the forgiveness-map request without knowing it was designed.
+
+
+class PointMassRequest(BaseModel):
+    name: str
+    mass_g: float
+    toe_mm: float           # + toward the toe
+    crown_mm: float         # + toward the crown
+    back_mm: float          # + deeper into the head
+
+
+class MeshResolutionRequest(BaseModel):
+    n_theta: int = 180
+    n_phi: int = 360
+
+
+class HeadDesignRequest(BaseModel):
+    name: str
+    half_width_mm: float
+    half_height_mm: float
+    half_depth_mm: float
+    face_width_mm: float
+    crown_mass_g: float
+    sole_mass_g: float
+    face_mass_g: float
+    hosel: PointMassRequest
+    weights: list[PointMassRequest] = []
+    mesh: MeshResolutionRequest = MeshResolutionRequest()
+
+
+def to_head_design(request: HeadDesignRequest) -> HeadDesign:
+    """Rebuilds through the dataclasses, so every design rule is re-checked."""
+    return HeadDesign(
+        name=request.name,
+        half_width_mm=request.half_width_mm,
+        half_height_mm=request.half_height_mm,
+        half_depth_mm=request.half_depth_mm,
+        face_width_mm=request.face_width_mm,
+        crown_mass_g=request.crown_mass_g,
+        sole_mass_g=request.sole_mass_g,
+        face_mass_g=request.face_mass_g,
+        hosel=PointMass(**request.hosel.model_dump()),
+        weights=[PointMass(**w.model_dump()) for w in request.weights],
+        mesh=MeshResolution(**request.mesh.model_dump()),
+    )
+
+
+class SaveDesignRequest(BaseModel):
+    name: str
+    design: HeadDesignRequest
+
+
+def design_to_payload(design: HeadDesign) -> dict:
+    """A design in the wire's own units -- asdict is exactly that already."""
+    return asdict(design)
+
+
+def design_result_to_payload(result: DesignResult) -> dict:
+    """Everything the design produced, for a form to display and a map to use.
+
+    `head` is a HeadMassPropertiesRequest-shaped dict on purpose: the browser
+    posts it back unchanged to /calculations/forgiveness-map.
+    """
+    from units import kg_m2_to_g_cm2, m_to_mm
+
+    head = result.head
+    return {
+        "head": head_to_request_payload(head),
+        "mass_g": head.mass_kg * 1000.0,
+        "cg_mm": [m_to_mm(v) for v in head.cg_m],
+        "cg_depth_mm": m_to_mm(head.cg_depth_m),
+        "sweet_spot_mm": [m_to_mm(head.sweet_spot_m[0]), m_to_mm(head.sweet_spot_m[1])],
+        "inertia_g_cm2": [[kg_m2_to_g_cm2(v) for v in row] for row in head.inertia_about_cg],
+        "face_description": head.face.describe(),
+        "breakdown": [
+            {
+                "name": part.name,
+                "mass_g": part.mass_g,
+                "mass_share": part.mass_share,
+                "cg_pull_mm": [float(v) for v in part.cg_pull_mm],
+                "ixx_g_cm2": float(part.inertia_g_cm2[0][0]),
+                "iyy_g_cm2": float(part.inertia_g_cm2[1][1]),
+                "izz_g_cm2": float(part.inertia_g_cm2[2][2]),
+                "ixx_share": part.ixx_share,
+                "iyy_share": part.iyy_share,
+            }
+            for part in result.breakdown
+        ],
+        "conformance": result.conformance,
+        "warnings": result.warnings,
+        "design": design_to_payload(result.design),
     }

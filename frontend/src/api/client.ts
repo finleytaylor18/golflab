@@ -11,6 +11,8 @@ import type {
   ForgivenessMapResult,
   MapComparisonResult,
   ImpactResult,
+  HeadDesign,
+  DesignResult,
 } from "./types";
 
 // Relative -- in production this app is served by the same FastAPI process
@@ -86,6 +88,10 @@ export function getImpact(
     strike_toe_mm: strikeToeMm,
     strike_crown_mm: strikeCrownMm,
   });
+}
+
+export function getHeadDesign(design: HeadDesign): Promise<DesignResult> {
+  return post("/calculations/head-design", design);
 }
 
 export { ApiError };

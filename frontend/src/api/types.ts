@@ -323,3 +323,96 @@ export const DEFAULT_MAP_SETTINGS: MapSettings = {
   spacing_mm: 2,
   retention_threshold_pct: 97,
 };
+
+// ---------------------------------------------------------------------------
+// PARAMETRIC HEAD DESIGN
+// ---------------------------------------------------------------------------
+//
+// Mirrors head_geometry.py. The designer's units and words: millimetres,
+// grams, and positions as "toward the toe / toward the crown / back from the
+// face" -- never a signed head-frame coordinate.
+
+export interface PointMass {
+  name: string;
+  mass_g: number;
+  toe_mm: number;
+  crown_mm: number;
+  back_mm: number;
+}
+
+export interface HeadDesign {
+  name: string;
+  half_width_mm: number;
+  half_height_mm: number;
+  half_depth_mm: number;
+  face_width_mm: number;
+  crown_mass_g: number;
+  sole_mass_g: number;
+  face_mass_g: number;
+  hosel: PointMass;
+  weights: PointMass[];
+  mesh: { n_theta: number; n_phi: number };
+}
+
+export interface PartContribution {
+  name: string;
+  mass_g: number;
+  mass_share: number;
+  cg_pull_mm: [number, number, number];
+  ixx_g_cm2: number;
+  iyy_g_cm2: number;
+  izz_g_cm2: number;
+  ixx_share: number;
+  iyy_share: number;
+}
+
+export interface DesignConformance {
+  heel_toe_mm: number;
+  heel_toe_conforms: boolean;
+  sole_crown_mm: number;
+  sole_crown_conforms: boolean;
+  face_to_back_mm: number;
+  proportion_conforms: boolean;
+  volume_cc: number;
+  volume_conforms: boolean;
+  rules_frame_moi_g_cm2: number;
+  moi_conforms: boolean;
+  conforms: boolean;
+  citation: string;
+}
+
+export interface DesignResult {
+  // Shaped exactly like HeadMassProperties, so it posts straight into the
+  // forgiveness-map request.
+  head: HeadMassProperties;
+  mass_g: number;
+  cg_mm: [number, number, number];
+  cg_depth_mm: number;
+  sweet_spot_mm: [number, number];
+  inertia_g_cm2: number[][];
+  face_description: string;
+  breakdown: PartContribution[];
+  conformance: DesignConformance;
+  warnings: string[];
+  design: HeadDesign;
+}
+
+// Mirrors head_geometry.default_design(): a PLACEHOLDER to edit, not a
+// product. Round design-intent numbers chosen so the panel opens on a
+// plausible, conforming head.
+export const DEFAULT_DESIGN: HeadDesign = {
+  name: "design_v1 (placeholder, edit me)",
+  half_width_mm: 60,
+  half_height_mm: 32,
+  half_depth_mm: 55,
+  face_width_mm: 100,
+  crown_mass_g: 50,
+  sole_mass_g: 80,
+  face_mass_g: 30,
+  hosel: { name: "hosel", mass_g: 12, toe_mm: -45, crown_mm: 20, back_mm: 20 },
+  weights: [
+    { name: "toe weight", mass_g: 14, toe_mm: 40, crown_mm: -10, back_mm: 65 },
+    { name: "heel weight", mass_g: 14, toe_mm: -40, crown_mm: -10, back_mm: 65 },
+  ],
+  mesh: { n_theta: 180, n_phi: 360 },
+};

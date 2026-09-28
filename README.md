@@ -180,3 +180,7 @@ These are documented, intentional simplifications for a first version — refini
 - [ ] CAD import: read an STL export through the integrator's solid mode (built, untested on real geometry)
 - [ ] A measured head, to put a number on the ellipsoid idealisation
 - [ ] Materials database
+
+## Copyright
+
+Copyright © 2026 Finley Taylor. All rights reserved. The code is public to read, but it is not licensed for reuse, modification or redistribution without my written permission.
